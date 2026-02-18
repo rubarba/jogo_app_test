@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0D1B2A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>EcoJogo — Tratolixo</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F5F2EC;--surface:#EDE9DF;--surface2:#E4DFD4;
+    --text:#1a2e1a;--muted:#6b7c6b;
+    --red:#DC2626;--green:#3a7d1e;--gold:#B45309;
+    --brand:#8dc63f;--brand-dark:#00583d;--brand-glow:rgba(0,88,61,0.15);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overflow:hidden;}
+  body{
+    background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    touch-action:none;user-select:none;height:100dvh;
+  }
+  .screen{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;padding:20px;
+    transition:opacity .35s,transform .35s;overflow-y:auto;
+  }
+  .screen.hidden{opacity:0;pointer-events:none;transform:scale(.96);}
+  @keyframes countPop{0%{transform:scale(1.6);opacity:0;}40%{transform:scale(.9);opacity:1;}70%{transform:scale(1.05);}100%{transform:scale(1);opacity:1;}}
+  @keyframes countFade{to{opacity:0;transform:scale(2);}}
+  .count-pop{animation:countPop .35s cubic-bezier(.175,.885,.32,1.275) forwards;}
+  .count-fade{animation:countFade .25s ease forwards;}
+
+  /* ── START ── */
+  #start-screen{background:var(--bg);}
+  .logo-badge{
+    background:var(--brand-dark);color:#fff;font-family:'Outfit',sans-serif;
+    font-weight:800;font-size:11px;letter-spacing:3px;text-transform:uppercase;
+    padding:6px 18px;border-radius:20px;margin-bottom:20px;
+  }
+  h1{font-family:'Outfit',sans-serif;font-size:clamp(30px,7vw,50px);font-weight:800;line-height:1.1;text-align:center;margin-bottom:10px;}
+  h1 span{color:var(--brand);}
+  .subtitle{color:var(--muted);font-size:14px;text-align:center;max-width:290px;margin-bottom:20px;line-height:1.65;}
+  .how{
+    background:var(--surface);border-radius:16px;
+    border:1px solid rgba(0,88,61,.12);width:100%;max-width:320px;margin-bottom:14px;
+    overflow:hidden;
+  }
+  .how-toggle{
+    width:100%;display:flex;align-items:center;justify-content:space-between;
+    padding:14px 16px;background:none;border:none;cursor:pointer;
+  }
+  .how-toggle:focus{outline:none;}
+  .how-title{
+    font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;
+    letter-spacing:2px;text-transform:uppercase;color:var(--brand-dark);
+    flex:1;text-align:center;
+  }
+  .how-body{
+    padding:0 16px;max-height:0;overflow:hidden;
+    transition:max-height .35s ease, padding .35s ease;
+  }
+  .how-body.open{max-height:400px;padding:0 16px 14px;}
+  .how-row{display:flex;align-items:center;gap:10px;margin-bottom:7px;font-size:13px;line-height:1.4;}
+  .how-row:last-child{margin-bottom:0;}
+  .how-icon{width:26px;height:26px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .bins-mini{display:flex;gap:8px;margin-bottom:18px;}
+  .bin-chip{
+    display:flex;flex-direction:column;align-items:center;
+    background:var(--surface);border-radius:12px;padding:12px 8px;
+    border:2px solid transparent;flex:1;cursor:pointer;
+    transition:border-color .2s,background .2s;
+  }
+  .bin-chip:hover{background:var(--surface2);}
+  .bin-chip.active{border-color:var(--active-color, #00583d);}
+  .bin-chip .dot{width:26px;height:26px;border-radius:50%;margin-bottom:7px;}
+  .bin-chip .nm{font-size:9px;color:var(--text);font-weight:700;text-transform:uppercase;letter-spacing:.5px;text-align:center;}
+  .bin-info-bar{
+    width:100%;max-width:320px;
+    overflow:hidden;max-height:0;
+    transition:max-height .3s ease, opacity .3s ease, margin .3s ease;
+    opacity:0;margin-bottom:0;
+  }
+  .bin-info-bar.show{max-height:80px;opacity:1;margin-bottom:8px;}
+  .bin-info-bar > span:last-child{
+    display:block;
+    background:var(--surface);border-radius:12px;padding:10px 14px;
+    font-size:12px;color:var(--text);line-height:1.55;text-align:center;
+    border-left:3px solid var(--info-color,#00583d);
+  }
+  .bin-info-dot{display:none;}
+  .btn-primary{
+    background:var(--brand-dark);color:#fff;border:none;border-radius:16px;
+    padding:15px 0;font-family:'Outfit',sans-serif;font-size:17px;font-weight:700;
+    cursor:pointer;letter-spacing:.4px;transition:background .2s,transform .1s;
+    width:100%;max-width:300px;box-shadow:0 8px 28px rgba(0,88,61,.45);
+  }
+  .btn-primary:active{transform:scale(.97);background:#003d28;}
+
+  /* ── GAME ── */
+  #game-screen{padding:0;}
+  #hud{
+    position:absolute;top:0;left:0;right:0;z-index:10;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 16px 8px;
+    background:linear-gradient(to bottom,rgba(245,242,236,.97) 0%,rgba(245,242,236,0) 100%);
+  }
+  .hud-block{display:flex;flex-direction:column;align-items:center;}
+  .hud-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:1px;}
+  .hud-val{font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;}
+  .lives{display:flex;gap:5px;align-items:center;}
+  .life-dot{width:11px;height:11px;border-radius:50%;background:var(--red);box-shadow:0 0 5px rgba(220,38,38,.4);transition:.3s;}
+  .life-dot.lost{background:rgba(220,38,38,.15);box-shadow:none;transform:scale(.75);}
+
+  /* Combo bar */
+  #combo-hud{
+    position:absolute;top:52px;left:14px;z-index:10;
+    display:flex;align-items:center;gap:8px;opacity:0;transition:opacity .3s;
+  }
+
+  #combo-hud.show{opacity:1;}
+  #combo-dots{display:flex;gap:4px;}
+  .combo-dot{
+    width:9px;height:9px;border-radius:50%;
+    background:rgba(0,88,61,.12);border:1px solid rgba(0,88,61,.2);
+    transition:background .2s,transform .2s,box-shadow .2s;
+  }
+  .combo-dot.lit{background:var(--gold);border-color:var(--gold);box-shadow:0 0 6px rgba(245,158,11,.8);transform:scale(1.2);}
+  #combo-label{font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;color:var(--gold);}
+
+  /* Multiplier flash */
+  #multi-flash{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);
+    z-index:25;pointer-events:none;
+    font-family:'Outfit',sans-serif;font-size:48px;font-weight:800;
+    color:var(--gold);text-shadow:0 0 30px rgba(245,158,11,.9);
+    transition:transform .25s cubic-bezier(.175,.885,.32,1.275),opacity .25s;
+    opacity:0;
+  }
+  #multi-flash.pop{transform:translate(-50%,-50%) scale(1);opacity:1;}
+
+  /* Timer bar */
+  #timer-wrap{
+    position:absolute;top:52px;left:14px;right:14px;height:4px;
+    border-radius:3px;background:rgba(0,88,61,.12);z-index:9;
+  }
+  #timer-bar{height:100%;border-radius:3px;transition:width .12s linear;}
+  #timer-bar.pulse{animation:pulse-bar .38s ease-in-out infinite alternate;}
+  @keyframes pulse-bar{from{opacity:1;}to{opacity:.3;filter:brightness(1.8);}}
+  #countdown-badge{
+    position:absolute;top:44px;right:14px;z-index:11;
+    font-family:'Outfit',sans-serif;font-weight:800;font-size:13px;
+    color:var(--red);opacity:0;transition:opacity .2s;
+    text-shadow:0 0 8px rgba(220,38,38,.5);pointer-events:none;
+  }
+  #countdown-badge.show{opacity:1;}
+
+  #btn-pause{
+    position:absolute;top:8px;right:12px;z-index:12;
+    background:rgba(0,88,61,.08);border:1px solid rgba(0,88,61,.2);
+    color:var(--brand-dark);border-radius:10px;padding:5px 9px;
+    font-size:13px;cursor:pointer;
+  }
+
+  #level-badge{
+    position:absolute;top:58px;left:50%;transform:translateX(-50%);
+    z-index:10;opacity:0;transition:opacity .4s;
+    background:rgba(0,88,61,.9);
+    border:1px solid rgba(0,88,61,.3);border-radius:20px;
+    padding:4px 14px;font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;
+    letter-spacing:1px;color:#fff;white-space:nowrap;
+  }
+  #level-badge.show{opacity:1;}
+
+  /* Bin change flash */
+  #bin-flash{
+    position:absolute;inset:0;z-index:20;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    opacity:0;pointer-events:none;transition:opacity .22s;
+  }
+  #bin-flash.show{backdrop-filter:blur(4px);background:rgba(245,242,236,0.75);}
+  #bin-flash.show{opacity:1;}
+  #bcf-icon{font-size:56px;margin-bottom:10px;transform:scale(0);transition:transform .28s cubic-bezier(.175,.885,.32,1.275);}
+  #bin-flash.show #bcf-icon{transform:scale(1);}
+  #bcf-label{font-family:'Outfit',sans-serif;font-size:17px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.6);margin-bottom:4px;}
+  #bcf-sub{font-size:12px;color:rgba(255,255,255,.65);letter-spacing:.5px;}
+
+  canvas{display:block;width:100%;height:100dvh;}
+
+  /* Feedback */
+  #wrong-feedback{
+    position:absolute;bottom:110px;left:50%;transform:translateX(-50%);
+    background:rgba(245,242,236,.95);border:1px solid rgba(220,38,38,.35);padding:10px 18px;border-radius:14px;z-index:22;
+    text-align:center;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;
+  }
+  #wrong-feedback .wf-main{font-size:13px;color:var(--red);font-weight:600;margin-bottom:2px;}
+  #wrong-feedback .wf-hint{font-size:11px;color:var(--muted);}
+  #wrong-feedback.show{opacity:1;}
+  #missed-toast{
+    position:absolute;top:72px;left:50%;transform:translateX(-50%);
+    background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.25);
+    color:var(--red);padding:6px 16px;border-radius:16px;
+    font-size:12px;font-weight:500;pointer-events:none;
+    opacity:0;transition:opacity .2s;z-index:22;white-space:nowrap;
+  }
+  #missed-toast.show{opacity:1;}
+
+  /* Extra life toast */
+  #life-toast{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    background:rgba(58,125,30,.1);border:1px solid rgba(58,125,30,.3);
+    color:var(--brand-dark);padding:10px 22px;border-radius:20px;
+    font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;
+    pointer-events:none;opacity:0;transition:opacity .25s;z-index:24;
+    white-space:nowrap;text-align:center;
+  }
+  #life-toast.show{opacity:1;}
+
+  /* Pause */
+  #pause-overlay{
+    position:absolute;inset:0;background:rgba(245,242,236,.92);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    opacity:0;pointer-events:none;transition:opacity .3s;z-index:18;
+  }
+  #pause-overlay.show{backdrop-filter:blur(7px);}
+  #pause-overlay.show{opacity:1;pointer-events:all;}
+  #pause-overlay h2{font-family:'Outfit',sans-serif;font-size:34px;font-weight:800;letter-spacing:3px;margin-bottom:8px;}
+  #pause-overlay p{font-size:13px;color:var(--muted);letter-spacing:1px;margin-bottom:24px;}
+  #pause-overlay .btn-primary{max-width:240px;margin-bottom:10px;background:var(--brand-dark);box-shadow:0 6px 20px rgba(0,88,61,.4);}
+  .btn-pause-secondary{
+    background:rgba(255,255,255,.06);color:var(--text);
+    border:1px solid rgba(255,255,255,.15);border-radius:14px;
+    padding:12px 0;font-family:'Outfit',sans-serif;font-size:14px;font-weight:500;
+    cursor:pointer;transition:background .2s,border-color .2s;
+    width:100%;max-width:240px;margin-bottom:8px;
+  }
+  .btn-pause-secondary:hover{background:rgba(141,198,63,.12);border-color:var(--brand);}
+  .btn-pause-secondary:active{transform:scale(.97);}
+
+  /* ── GAME OVER ── */
+  #gameover-screen{
+    background:var(--bg);
+    justify-content:flex-start;padding-top:28px;padding-bottom:28px;
+  }
+  .go-header{text-align:center;margin-bottom:14px;}
+  .go-icon-big{font-size:44px;margin-bottom:6px;}
+  #gameover-screen h2{font-family:'Outfit',sans-serif;font-size:26px;font-weight:800;}
+
+  #record-banner{
+    background:linear-gradient(135deg,var(--brand-dark),var(--brand));
+    border-radius:14px;padding:10px 20px;text-align:center;
+    margin-bottom:14px;width:100%;max-width:320px;
+    display:none;animation:pop .4s cubic-bezier(.175,.885,.32,1.275);
+  }
+  #record-banner.show{display:block;}
+  @keyframes pop{from{transform:scale(.7);opacity:0;}to{transform:scale(1);opacity:1;}}
+  #record-banner .rb-title{font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;letter-spacing:2px;color:#fef3c7;text-transform:uppercase;}
+  #record-banner .rb-score{font-family:'Outfit',sans-serif;font-size:34px;font-weight:800;color:#fff;}
+
+  .scores-row{display:flex;gap:10px;justify-content:center;margin-bottom:16px;width:100%;max-width:320px;}
+  .score-box{background:var(--surface);border-radius:14px;padding:12px 14px;text-align:center;border:1px solid rgba(0,88,61,.12);flex:1;}
+  .score-box .sv{font-family:'Outfit',sans-serif;font-size:26px;font-weight:800;}
+  .score-box .sl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+
+  /* Badges */
+  .section-title{font-family:'Outfit',sans-serif;font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;text-align:center;}
+  #badges-grid{
+    display:flex;flex-wrap:wrap;gap:8px;justify-content:center;
+    width:100%;max-width:320px;margin-bottom:14px;
+  }
+  .badge-card{
+    background:var(--surface);border-radius:14px;padding:12px 10px;
+    border:1px solid rgba(255,255,255,.07);
+    display:flex;flex-direction:column;align-items:center;
+    width:calc(50% - 4px);text-align:center;
+    animation:pop .4s cubic-bezier(.175,.885,.32,1.275);
+  }
+  .badge-card.locked{opacity:.3;filter:grayscale(1);}
+  .badge-icon{font-size:28px;margin-bottom:6px;display:flex;align-items:center;justify-content:center;}
+  .badge-name{font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;margin-bottom:2px;}
+  .badge-desc{font-size:10px;color:var(--muted);line-height:1.4;}
+  .badge-new{
+    background:var(--gold);color:#000;font-size:8px;font-weight:800;
+    letter-spacing:1px;text-transform:uppercase;border-radius:6px;
+    padding:2px 6px;margin-top:4px;
+  }
+
+  .bin-stats{width:100%;max-width:320px;display:flex;flex-direction:column;gap:7px;margin-bottom:16px;}
+  .bsr{
+    background:var(--surface);border-radius:12px;padding:11px 13px;
+    border:1px solid rgba(0,88,61,.1);
+    display:grid;grid-template-columns:18px 1fr 34px 34px;align-items:center;gap:8px;
+  }
+  .bsr-dot{width:13px;height:13px;border-radius:4px;}
+  .bsr-name{font-size:12px;font-weight:500;}
+  .bsr-c{color:var(--green);font-family:'Outfit',sans-serif;font-weight:800;font-size:13px;text-align:right;}
+  .bsr-w{color:var(--red);font-family:'Outfit',sans-serif;font-weight:800;font-size:13px;text-align:right;}
+  .bsr-bar-wrap{grid-column:1/-1;height:3px;background:rgba(255,255,255,.07);border-radius:2px;}
+  .bsr-bar{height:100%;border-radius:2px;width:0;transition:width .9s ease;}
+
+  .btn-secondary{
+    background:transparent;color:var(--muted);border:1px solid rgba(0,88,61,.2);
+    border-radius:12px;padding:11px 0;font-size:14px;cursor:pointer;
+    transition:border-color .2s,color .2s;width:100%;max-width:300px;margin-top:8px;
+  }
+  .btn-secondary:hover{border-color:var(--brand);color:var(--text);}
+</style>
+</head>
+<body>
+
+<!-- ════ START ════ -->
+<div class="screen" id="start-screen">
+<img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iTGF5ZXJfMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAzNzkgMTA0Ij4KICA8IS0tIEdlbmVyYXRvcjogQWRvYmUgSWxsdXN0cmF0b3IgMzAuMS4wLCBTVkcgRXhwb3J0IFBsdWctSW4gLiBTVkcgVmVyc2lvbjogMi4xLjEgQnVpbGQgMTM2KSAgLS0+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC5zdDAgewogICAgICAgIGZpbGw6ICM4ZGM2M2Y7CiAgICAgIH0KCiAgICAgIC5zdDEgewogICAgICAgIGZpbGw6ICMwMDU4M2Q7CiAgICAgIH0KICAgIDwvc3R5bGU+CiAgPC9kZWZzPgogIDxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0zNC4xLDY0LjhjLS45LDEuOS0xLjQsMy45LTEuNCw2LjF2M2g4LjR2LTNjMC0yLjIuNy00LDItNS40czMuMi0yLDUuNS0yLDQuMi43LDUuNSwyYzEuMywxLjQsMiwzLjIsMiw1LjR2M2g4LjR2LTNjMC0yLjEtLjUtNC4yLTEuNC02LjEtLjktMS45LTIuMi0zLjYtMy45LTUsMS43LTEuNCwyLjktMywzLjktNC45LjktMS45LDEuNC0zLjksMS40LTYuMXYtM2gtOC40djNjMCwyLjItLjcsNC0yLDUuNC0xLjMsMS40LTMuMiwyLTUuNSwycy00LjItLjctNS41LTJjLTEuMy0xLjQtMi0zLjItMi01LjR2LTNoLTguNHYzYzAsMi4yLjUsNC4yLDEuNCw2LjEuOSwxLjksMi4yLDMuNSwzLjksNC45LTEuNywxLjQtMi45LDMtMy45LDVaIi8+CiAgPHBhdGggY2xhc3M9InN0MCIgZD0iTTI4LjYsMTIuMnMuMSwwLC4yLS4xYzUuNy0yLjUsMTIuMS0zLjksMTguNy00aDMuMWMuNywwLDEuNC4xLDIuMi4yaC4zYzguNC45LDE2LjIsNCwyMi43LDguN2w0LjctNi45Yy4zLS40LjgtLjYsMS4yLS41LjUuMS44LjUuOSwxbDIuOSwxNi4xLDIsMTEuM2MwLC40LDAsLjctLjMsMS0uMi4zLS42LjQtLjkuNGwtMTIuNy0uNy0xNC4zLS44Yy0uNSwwLS45LS4zLTEuMS0uOC0uMi0uNCwwLTEsLjMtMS4zbDUuOS01LjZjLTMuNy0yLjQtOC00LTEyLjUtNC42LTEuNCwwLTIuOC0uMi00LjMtLjEtMTcsLjItMzAuNiwxNC4xLTMwLjUsMzEuMS4yLDE3LDE0LjEsMzAuNiwzMS4xLDMwLjUsMTctLjIsMzAuNi0xNC4xLDMwLjUtMzEuMSwwLTEuNS0uMi0yLjktLjQtNC40bDE2LjQtNi4yYy43LDMuMiwxLjEsNi42LDEuMiwxMC4xLjMsMjYuNS0yMSw0OC4yLTQ3LjUsNDguNEMyMS45LDEwNC4yLjIsODIuOSwwLDU2LjQtLjIsMzYuNywxMS42LDE5LjYsMjguNSwxMi4xIi8+CiAgPHBhdGggY2xhc3M9InN0MCIgZD0iTTQ4LjcsNDcuOGMyLjgsMCw1LTIuMiw1LTVzLTIuMi01LTUtNS01LDIuMi01LDUsMi4yLDUsNSw1WiIvPgogIDxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0zNjAuOSwzNS4wMmM0LjksMCw2LjksNS4zLDYuOSwxMC40cy0yLjYsMTAuNS02LjksMTAuNS03LjEtNC41LTcuMS0xMC40LDItMTAuNCw3LjEtMTAuNE0zNjEuMywyNy4zMmMtMTEuMiwwLTE4LjYsNy4yLTE4LjYsMTguNXM3LjgsMTcuOSwxOCwxNy45LDE4LjMtNS44LDE4LjMtMTguNS03LjEtMTcuOC0xNy43LTE3LjhNMzA1LjUsMjguMTJsMTEuNSwxNy0xMS44LDE3LjdoMTEuOWwzLjMtNi4yYy45LTEuNywxLjgtMy40LDIuNi01LjNoLjJjLjksMS44LDEuNywzLjUsMi43LDUuM2wzLjUsNi4yaDEyLjJsLTExLjYtMTguMiwxMS40LTE2LjVoLTExLjdsLTMuMSw1LjdjLS45LDEuNy0xLjgsMy40LTIuNyw1LjNoLS4xYy0uOS0xLjctMS44LTMuNC0yLjgtNS4ybC0zLjQtNS44aC0xMi4xWk0yOTUuNCwxMy4xMmMtMy41LDAtNS43LDIuMy01LjcsNS40czIuMiw1LjQsNS42LDUuNCw1LjgtMi40LDUuOC01LjQtMi4yLTUuNC01LjctNS40Wk0zMDAuNywyOC4xMmgtMTAuOHYzNC43aDEwLjhWMjguMTJaTTI3MC40LDYyLjgyaDEwLjhWMTIuNDJoLTEwLjh2NTAuNFoiLz4KICA8cGF0aCBjbGFzcz0ic3QxIiBkPSJNMjQ1LjcsMzUuMDJjNC45LDAsNi45LDUuMyw2LjksMTAuNHMtMi42LDEwLjUtNi45LDEwLjUtNy4xLTQuNS03LjEtMTAuNCwyLTEwLjQsNy4xLTEwLjRNMjQ2LDI3LjMyYy0xMS4yLDAtMTguNiw3LjItMTguNiwxOC41czcuOCwxNy45LDE4LDE3LjksMTguMy01LjgsMTguMy0xOC41LTcuMS0xNy44LTE3LjctMTcuOE0yMDUuMiwyMS42MnY2LjVoLTQuNnY4aDQuNnYxNC4yYzAsNC45LDEsOC4yLDMsMTAuMywxLjgsMS44LDQuNywzLDguMiwzczUuNi0uNCw3LS45di04LjJjLTEuMS4yLTEuOC4zLTMuMy4zLTMuMiwwLTQuMy0xLjktNC4zLTYuMXYtMTIuNmg3Ljd2LThoLTcuN3YtOS40bC0xMC42LDIuOVpNMTg1LjMsNTAuMjJjMCwuNiwwLDEuMy0uMiwxLjgtLjcsMi4yLTMsNC01LjYsNHMtNC4zLTEuMy00LjMtNC4xYzAtNC4xLDQuNC01LjUsMTAuMS01LjV2My44Wk0xOTUuNyw0Mi4zMmMwLTguMi0zLjYtMTUtMTUuMi0xNXMtMTEuMSwxLjgtMTMuNSwzLjFsMiw3YzIuMy0xLjQsNi0yLjYsOS42LTIuNiw1LjMsMCw2LjMsMi42LDYuMyw0LjV2LjRjLTEyLjMsMC0yMC40LDQuMy0yMC40LDEzLjNzNC4yLDEwLjYsMTEuMiwxMC42LDcuNy0xLjUsOS45LTQuM2guMmwuNiwzLjVoOS43Yy0uNC0xLjktLjYtNS4xLS42LTguNHYtMTIuMWguMlpNMTQwLjYsNjIuODJoMTAuOHYtMTcuNmMwLS45LDAtMS43LjItMi40LjctMy4zLDMuNC01LjUsNy40LTUuNXMyLjEuMSwyLjkuM3YtMTAuMmMtLjgtLjEtMS4zLS4yLTIuMy0uMi0zLjQsMC03LjYsMi4xLTkuNCw3LjJoLS4zbC0uNC02LjRoLTkuMmMuMiwzLC4zLDYuMy4zLDExLjR2MjMuNFpNMTE2LjEsMjEuNjJ2Ni41aC00LjZ2OGg0LjZ2MTQuMmMwLDQuOSwxLDguMiwzLDEwLjMsMS44LDEuOCw0LjcsMyw4LjIsM3M1LjYtLjQsNy0uOXYtOC4yYy0xLjEuMi0xLjguMy0zLjMuMy0zLjIsMC00LjMtMS45LTQuMy02LjF2LTEyLjZoNy43di04aC03Ljd2LTkuNGwtMTAuNiwyLjlaIi8+CiAgPHBhdGggY2xhc3M9InN0MSIgZD0iTTM3MC45LDg1LjUyYy44LjQsMiwuOCwzLjQuOCwzLDAsNC41LTEuNCw0LjUtMy40LDAtMS41LS44LTIuNi0yLjgtMy4zLTEuMy0uNS0xLjctLjctMS43LTEuMnMuNS0uOCwxLjItLjgsMS44LjMsMi4zLjZsLjYtMi4zYy0uNi0uMy0xLjctLjYtMy0uNi0yLjYsMC00LjMsMS41LTQuMywzLjUsMCwxLjIuOCwyLjQsMywzLjIsMS4yLjQsMS41LjcsMS41LDEuMnMtLjQuOS0xLjQuOS0yLjItLjQtMi44LS44bC0uNiwyLjMuMS0uMVpNMzY0LDc3LjYyYzEuNSwwLDIuMSwxLjYsMi4xLDMuMXMtLjgsMy4yLTIuMSwzLjItMi4yLTEuNC0yLjItMy4yLjYtMy4yLDIuMi0zLjJNMzY0LjEsNzUuMjJjLTMuNCwwLTUuNiwyLjItNS42LDUuNnMyLjQsNS40LDUuNSw1LjQsNS42LTEuOCw1LjYtNS42LTIuMi01LjQtNS40LTUuNE0zNDYuNCw4Ni4wMmgzLjN2LTYuMWMwLS4zLDAtLjYuMS0uOC4yLS42LjgtMS4yLDEuNy0xLjJzMS43LjksMS43LDIuM3Y1LjhoMy4zdi02LjJjMC0zLjEtMS42LTQuNS0zLjgtNC41cy0yLjgsMS0zLjMsMS43di0xLjVoLTN2MTAuNi0uMVpNMzQwLjcsODIuMjJ2LjZjLS4yLjctLjksMS4yLTEuNywxLjJzLTEuMy0uNC0xLjMtMS4yYzAtMS4yLDEuMy0xLjcsMy4xLTEuN3YxLjFoLS4xWk0zNDMuOCw3OS44MmMwLTIuNS0xLjEtNC42LTQuNi00LjZzLTMuNC41LTQuMS45bC42LDIuMWMuNy0uNCwxLjgtLjgsMi45LS44LDEuNiwwLDEuOS44LDEuOSwxLjQtMy43LjEtNi4yLDEuNC02LjIsNC4yczEuMywzLjIsMy40LDMuMiwyLjMtLjUsMy0xLjNsLjIsMS4xaDNjLS4xLS42LS4yLTEuNi0uMi0yLjV2LTMuN2guMVpNMzI1LjUsODAuMDJ2LS42Yy4yLS45LDEtMS42LDEuOS0xLjYsMS41LDAsMi4zLDEuMywyLjMsMi45cy0uOSwzLTIuMywzLTEuNy0uNy0xLjktMS41di0yLjJaTTMyMi4yLDgyLjkydjMuMWgyLjh2LTEuNWguMmMuNywxLjIsMS45LDEuNywzLjIsMS43LDIuNCwwLDQuOC0xLjksNC44LTUuNywwLTMuMi0xLjgtNS4zLTQuMy01LjNzLTIuNi42LTMuMiwxLjV2LTZoLTMuM3YxMi4yaC0uMlpNMzE0LjEsODYuMDJoMy4zdi02Yy4yLTEsMS0xLjcsMi4yLTEuN3MuNiwwLC45LDB2LTMuMWgtLjdjLTEsMC0yLjMuNi0yLjgsMi4ydi0xLjloLTIuOXYxMC42LS4xWk0zMTEuNCw3NS41MmgtMy4zdjYuM2MwLC4zLDAsLjUtLjEuNy0uMi41LS43LDEuMS0xLjYsMS4xcy0xLjctLjktMS43LTIuNXYtNS43aC0zLjN2Ni4yYzAsMy4zLDEuNiw0LjYsMy43LDQuNnMyLjktMS4xLDMuMy0xLjdsLjIsMS41aDIuOHYtMTAuNi4xWk0yODcuMiw4NS41MmMuOC40LDIsLjgsMy40LjgsMywwLDQuNS0xLjQsNC41LTMuNCwwLTEuNS0uOC0yLjYtMi44LTMuMy0xLjMtLjUtMS43LS43LTEuNy0xLjJzLjQtLjgsMS4yLS44LDEuOC4zLDIuMy42bC42LTIuM2MtLjYtLjMtMS43LS42LTMtLjYtMi42LDAtNC4zLDEuNS00LjMsMy41LDAsMS4yLjgsMi40LDMsMy4yLDEuMi40LDEuNS43LDEuNSwxLjJzLS40LjktMS40LjktMi4yLS40LTIuOC0uOGwtLjYsMi4zLjEtLjFaTTI4MC4zLDc3LjYyYzEuNSwwLDIuMSwxLjYsMi4xLDMuMXMtLjgsMy4yLTIuMSwzLjItMi4yLTEuNC0yLjItMy4yLjYtMy4yLDIuMi0zLjJNMjgwLjQsNzUuMjJjLTMuNCwwLTUuNiwyLjItNS42LDUuNnMyLjQsNS40LDUuNSw1LjQsNS42LTEuOCw1LjYtNS42LTIuMi01LjQtNS40LTUuNE0yNzIuNyw3NS41MmgtMy4zdjYuM2MwLC4zLDAsLjUtLjEuNy0uMi41LS43LDEuMS0xLjYsMS4xcy0xLjctLjktMS43LTIuNXYtNS43aC0zLjN2Ni4yYzAsMy4zLDEuNSw0LjYsMy43LDQuNnMyLjktMS4xLDMuMy0xLjd2MS41aDN2LTEwLjYuMVpNMjU2LjksODEuMzJ2LjhjLS4yLjktMSwxLjYtMS45LDEuNi0xLjQsMC0yLjItMS4xLTIuMi0yLjlzLjgtMywyLjMtMywxLjcuNywxLjksMS42djJsLS4xLS4xWk0yNTYuOSw3MC43MnY1LjdjLS41LS43LTEuNS0xLjItMi44LTEuMi0yLjUsMC00LjcsMi4xLTQuNyw1LjYsMCwzLjMsMiw1LjQsNC41LDUuNHMyLjctLjYsMy4zLTEuOHYxLjVoM3YtMTUuM2gtMy4zdi4xWk0yNDYuMiw3MC45MmwtMS45LDMuM2gyLjJsMi42LTMuM2gtMywuMVpNMjQ3LjMsNzUuNTJoLTMuM3YxMC41aDMuM3YtMTAuNVpNMjM0LjEsODUuNTJjLjguNCwyLC44LDMuNC44LDMsMCw0LjUtMS40LDQuNS0zLjQsMC0xLjUtLjgtMi42LTIuOC0zLjMtMS4zLS41LTEuNy0uNy0xLjctMS4ycy41LS44LDEuMi0uOCwxLjguMywyLjMuNmwuNi0yLjNjLS42LS4zLTEuNy0uNi0zLS42LTIuNiwwLTQuMywxLjUtNC4zLDMuNSwwLDEuMi44LDIuNCwzLDMuMiwxLjIuNCwxLjUuNywxLjUsMS4ycy0uNC45LTEuNC45LTIuMi0uNC0yLjgtLjhsLS42LDIuMy4xLS4xWk0yMjUuOCw3OS42MmMwLS45LjYtMi4xLDItMi4xczEuOSwxLjMsMS45LDIuMWgtMy45Wk0yMzIuNiw4MS44MmMwLS4yLjEtLjcuMS0xLjMsMC0yLjYtMS4zLTUuMy00LjctNS4zcy01LjMsMy01LjMsNS42LDIsNS40LDUuNiw1LjQsMi43LS4yLDMuOC0uN2wtLjQtMi4yYy0uOS4zLTEuOC41LTIuOS41cy0yLjktLjYtMy0yaDYuOFpNMjE1LjMsODYuMDJoMy4zdi02Yy4yLTEsMS0xLjcsMi4yLTEuN3MuNiwwLC45LDB2LTMuMWgtLjdjLTEsMC0yLjMuNi0yLjgsMi4ydi0xLjloLTIuOXYxMC42LS4xWk0yMDIuMSw3OS42MmMwLS45LjYtMi4xLDItMi4xczEuOSwxLjMsMS45LDIuMWgtMy45Wk0yMDguOSw4MS44MmMwLS4yLjEtLjcuMS0xLjMsMC0yLjYtMS4zLTUuMy00LjctNS4zcy01LjMsMy01LjMsNS42LDIsNS40LDUuNiw1LjQsMi43LS4yLDMuOC0uN2wtLjQtMi4yYy0uOS4zLTEuOC41LTIuOS41cy0yLjktLjYtMy0yaDYuOFpNMTkzLjcsODEuMzJ2LjhjLS4yLjktMSwxLjYtMS45LDEuNi0xLjQsMC0yLjItMS4xLTIuMi0yLjlzLjgtMywyLjMtMywxLjcuNywxLjksMS42djJsLS4xLS4xWk0xOTMuNyw3MC43MnY1LjdjLS41LS43LTEuNS0xLjItMi44LTEuMi0yLjUsMC00LjcsMi4xLTQuNyw1LjYsMCwzLjMsMiw1LjQsNC41LDUuNHMyLjYtLjYsMy4zLTEuOHYxLjVoM3YtMTUuM2gtMy4zdi4xWk0xNzQuOSw3Ny42MmMxLjUsMCwyLjEsMS42LDIuMSwzLjFzLS44LDMuMi0yLjEsMy4yLTIuMi0xLjQtMi4yLTMuMi42LTMuMiwyLjItMy4yTTE3NSw3NS4yMmMtMy40LDAtNS42LDIuMi01LjYsNS42czIuNCw1LjQsNS41LDUuNCw1LjYtMS44LDUuNi01LjYtMi4yLTUuNC01LjQtNS40TTE2MS4yLDc0LjAyYzAtLjYuMi0xLC41LTFzLjQuMS44LjNjLjUuMi45LjUsMS41LjUsMS4xLDAsMS44LS44LDEuOC0yLjhoLTEuNWMwLC44LS4yLjktLjYuOXMtLjYtLjItLjktLjRjLS40LS4yLS45LS40LTEuNC0uNC0xLjEsMC0xLjgsMS0xLjgsMi44aDEuNnYuMVpNMTY0LjIsODIuMjJ2LjZjLS4yLjctLjksMS4yLTEuNywxLjJzLTEuMy0uNC0xLjMtMS4yYzAtMS4yLDEuMy0xLjcsMy4xLTEuN3YxLjFoLS4xWk0xNjcuMyw3OS44MmMwLTIuNS0xLjEtNC42LTQuNi00LjZzLTMuNC41LTQuMS45bC42LDIuMWMuNy0uNCwxLjgtLjgsMi45LS44LDEuNiwwLDEuOS44LDEuOSwxLjQtMy43LjEtNi4yLDEuNC02LjIsNC4yczEuMywzLjIsMy40LDMuMiwyLjMtLjUsMy0xLjNsLjIsMS4xaDNjLS4xLS42LS4yLTEuNi0uMi0yLjV2LTMuN2guMVpNMTUxLjEsNzMuNTJ2MmgtMS40djIuNGgxLjR2NC4zYzAsMS41LjMsMi41LjksMy4xLjUuNSwxLjQuOSwyLjUuOXMxLjctLjEsMi4xLS4zdi0yLjVoLTFjLTEsMC0xLjMtLjYtMS4zLTEuOXYtMy44aDIuM3YtMi40aC0yLjN2LTIuOGwtMy4yLjl2LjFaTTE0MC43LDg1LjUyYy44LjQsMiwuOCwzLjQuOCwzLDAsNC41LTEuNCw0LjUtMy40LDAtMS41LS44LTIuNi0yLjgtMy4zLTEuMy0uNS0xLjctLjctMS43LTEuMnMuNS0uOCwxLjMtLjgsMS44LjMsMi4zLjZsLjYtMi4zYy0uNi0uMy0xLjctLjYtMy0uNi0yLjYsMC00LjMsMS41LTQuMywzLjUsMCwxLjIuOCwyLjQsMywzLjIsMS4yLjQsMS41LjcsMS41LDEuMnMtLjQuOS0xLjQuOS0yLjItLjQtMi44LS44bC0uNiwyLjN2LS4xWk0xMzIuNCw3OS42MmMwLS45LjYtMi4xLDItMi4xczEuOSwxLjMsMS45LDIuMWgtMy45Wk0xMzkuMiw4MS44MmMwLS4yLjEtLjcuMS0xLjMsMC0yLjYtMS4zLTUuMy00LjctNS4zcy01LjMsMy01LjMsNS42LDIsNS40LDUuNiw1LjQsMi43LS4yLDMuOC0uN2wtLjQtMi4yYy0uOS4zLTEuOC41LTIuOS41cy0yLjktLjYtMy0yaDYuOFpNMTI0LDgxLjMyYzAsLjMsMCwuNi0uMS45LS4yLjgtLjksMS4zLTEuNywxLjMtMS40LDAtMi4xLTEuMi0yLjEtMi44cy45LTMsMi4yLTMsMS41LjYsMS44LDEuNHYyLjFsLS4xLjFaTTEyNy4zLDc4LjYydi0zLjFoLTIuOHYxLjNoLS4yYy0uNS0uOS0xLjQtMS41LTIuOS0xLjUtMi42LDAtNC44LDIuMi00LjgsNS42czEuOSw1LjEsNC41LDUuMSwyLjItLjUsMi44LTEuNHYuN2MwLDItMS4yLDIuOC0yLjcsMi44cy0yLjQtLjQtMy4xLS44bC0uNiwyLjVjLjkuNSwyLjQuOCwzLjguOHMzLjEtLjMsNC4zLTEuM2MxLjItMS4xLDEuNi0yLjcsMS42LTQuN3YtNS45bC4xLS4xWiIvPgo8L3N2Zz4=" alt="Tratolixo" style="height:70px;margin-bottom:14px;">
+<h1>Eco<span>Jogo</span></h1>
+<p class="subtitle">Aprende a separar o lixo de forma divertida!<br><span style="font-size:12px;opacity:.7;">Apanha os resíduos certos e torna-te um campeão da reciclagem 🌱</span></p>
+  <div class="bins-mini">
+    <div class="bin-chip" id="chip-blue" onclick="selectBin('blue')">
+      <div class="dot" style="background:#4BAED6"></div>
+      <div class="nm">Papel</div>
+    </div>
+    <div class="bin-chip" id="chip-yellow" onclick="selectBin('yellow')">
+      <div class="dot" style="background:#F0A830"></div>
+      <div class="nm">Plástico</div>
+    </div>
+    <div class="bin-chip" id="chip-green" onclick="selectBin('green')">
+      <div class="dot" style="background:#6DBE45"></div>
+      <div class="nm">Vidro</div>
+    </div>
+    <div class="bin-chip" id="chip-brown" onclick="selectBin('brown')">
+      <div class="dot" style="background:#C97040"></div>
+      <div class="nm">Bio</div>
+    </div>
+  </div>
+  <div class="bin-info-bar" id="bin-info-bar">
+    <span id="bin-info-dot" class="bin-info-dot"></span>
+    <span id="bin-info-txt"></span>
+  </div>
+  <div class="how" id="how-card">
+    <button class="how-toggle" id="how-toggle" onclick="toggleHow()">
+      <span class="how-title">Como Jogar</span>
+      <svg id="how-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#00583d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .3s;flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div class="how-body" id="how-body">
+      <div class="how-row"><div class="how-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#00583d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18"/><circle cx="8" cy="15" r="1.5" fill="#00583d"/><circle cx="12" cy="15" r="1.5" fill="#00583d"/><circle cx="16" cy="15" r="1.5" fill="#00583d"/></svg></div><div>O caixote muda de cor a cada <strong>15 segundos</strong></div></div>
+      <div class="how-row"><div class="how-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#00583d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><div>Apanha o resíduo certo para ganhar pontos</div></div>
+      <div class="how-row"><div class="how-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#00583d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c0 0-4 4-4 9a4 4 0 0 0 8 0c0-3-2-5-2-5s-.5 2-1.5 2.5C12 7 12 2 12 2z"/></svg></div><div><strong>5 seguidos</strong> activa o <strong>multiplicador!</strong></div></div>
+      <div class="how-row"><div class="how-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#00583d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 19H4.5a2.5 2.5 0 0 1 0-5H17"/><path d="M17 5h2.5a2.5 2.5 0 0 1 0 5H7"/><polyline points="14 2 17 5 14 8"/><polyline points="10 22 7 19 10 16"/></svg></div><div>Apanha o <strong>ícone especial ♻</strong> para ganhar vida extra</div></div>
+      <div class="how-row"><div class="how-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#00583d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div>Erros e itens perdidos <strong>custam vidas/pontos</strong></div></div>
+    </div>
+  </div>
+  <button class="btn-primary" id="btn-start">Jogar Agora</button>
+</div>
+
+<!-- ════ GAME ════ -->
+<div class="screen hidden" id="game-screen">
+  <div id="hud">
+    <div class="hud-block">
+      <div class="hud-label">Pontuação</div>
+      <div class="hud-val" id="score-val" style="color:var(--brand)">0</div>
+    </div>
+    <div class="lives" id="lives-display">
+      <div class="life-dot"></div><div class="life-dot"></div><div class="life-dot"></div>
+    </div>
+    <div class="hud-block" style="text-align:right;">
+      <div class="hud-label">Nível</div>
+      <div class="hud-val" id="level-val">1</div>
+    </div>
+  </div>
+  <button id="btn-pause">⏸</button>
+
+  <!-- Combo -->
+  <div id="combo-hud">
+    <div id="combo-dots"></div>
+    <div id="combo-label"></div>
+  </div>
+
+  <div id="timer-wrap"><div id="timer-bar"></div></div>
+  <div id="countdown-badge">⚡ MUDA JÁ!</div>
+  <div id="level-badge"></div>
+  <div id="multi-flash"></div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="bin-flash">
+    <div id="bcf-icon">♻️</div>
+    <div id="bcf-label">NOVO ECOPONTO!</div>
+    <div id="bcf-sub"></div>
+  </div>
+
+  <div id="missed-toast"></div>
+  <div id="wrong-feedback">
+    <div class="wf-main" id="wf-main"></div>
+    <div class="wf-hint" id="wf-hint"></div>
+  </div>
+  <div id="life-toast">❤️ Vida Extra! +1</div>
+
+  <div id="countdown-overlay" style="display:none;position:absolute;inset:0;z-index:35;background:rgba(245,242,236,.92);flex-direction:column;align-items:center;justify-content:center;">
+    <div id="countdown-num" style="font-family:'Outfit',sans-serif;font-size:100px;font-weight:800;color:var(--brand-dark);line-height:1;"></div>
+    <div style="font-family:'Outfit',sans-serif;font-size:16px;color:var(--muted);letter-spacing:2px;margin-top:8px;">PREPARA-TE!</div>
+  </div>
+  <div id="go-anim-overlay"  style="display:none;position:absolute;inset:0;z-index:30;background:rgba(245,242,236,.92);flex-direction:column;align-items:center;justify-content:center;">
+    <div id="go-anim-txt" style="text-align:center;">
+      <div style="font-size:64px;margin-bottom:12px;">💀</div>
+      <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:800;color:var(--brand-dark);letter-spacing:2px;">FIM DE JOGO</div>
+      <div style="font-family:'Outfit',sans-serif;font-size:14px;color:var(--muted);margin-top:6px;letter-spacing:1px;">A calcular resultados…</div>
+    </div>
+  </div>
+  <div id="pause-overlay">
+    <h2>PAUSA</h2>
+    <p>O planeta espera por ti…</p>
+    <button class="btn-primary" id="btn-resume">▶ Continuar</button>
+    <button class="btn-pause-secondary" id="btn-pause-restart">↺ Recomeçar</button>
+    <button class="btn-pause-secondary" id="btn-pause-menu">⌂ Menu Principal</button>
+  </div>
+</div>
+
+<!-- ════ GAME OVER ════ -->
+<div class="screen hidden" id="gameover-screen">
+  <div class="go-header">
+    <img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iTGF5ZXJfMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAzNzkgMTA0Ij4KICA8IS0tIEdlbmVyYXRvcjogQWRvYmUgSWxsdXN0cmF0b3IgMzAuMS4wLCBTVkcgRXhwb3J0IFBsdWctSW4gLiBTVkcgVmVyc2lvbjogMi4xLjEgQnVpbGQgMTM2KSAgLS0+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC5zdDAgewogICAgICAgIGZpbGw6ICM4ZGM2M2Y7CiAgICAgIH0KCiAgICAgIC5zdDEgewogICAgICAgIGZpbGw6ICMwMDU4M2Q7CiAgICAgIH0KICAgIDwvc3R5bGU+CiAgPC9kZWZzPgogIDxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0zNC4xLDY0LjhjLS45LDEuOS0xLjQsMy45LTEuNCw2LjF2M2g4LjR2LTNjMC0yLjIuNy00LDItNS40czMuMi0yLDUuNS0yLDQuMi43LDUuNSwyYzEuMywxLjQsMiwzLjIsMiw1LjR2M2g4LjR2LTNjMC0yLjEtLjUtNC4yLTEuNC02LjEtLjktMS45LTIuMi0zLjYtMy45LTUsMS43LTEuNCwyLjktMywzLjktNC45LjktMS45LDEuNC0zLjksMS40LTYuMXYtM2gtOC40djNjMCwyLjItLjcsNC0yLDUuNC0xLjMsMS40LTMuMiwyLTUuNSwycy00LjItLjctNS41LTJjLTEuMy0xLjQtMi0zLjItMi01LjR2LTNoLTguNHYzYzAsMi4yLjUsNC4yLDEuNCw2LjEuOSwxLjksMi4yLDMuNSwzLjksNC45LTEuNywxLjQtMi45LDMtMy45LDVaIi8+CiAgPHBhdGggY2xhc3M9InN0MCIgZD0iTTI4LjYsMTIuMnMuMSwwLC4yLS4xYzUuNy0yLjUsMTIuMS0zLjksMTguNy00aDMuMWMuNywwLDEuNC4xLDIuMi4yaC4zYzguNC45LDE2LjIsNCwyMi43LDguN2w0LjctNi45Yy4zLS40LjgtLjYsMS4yLS41LjUuMS44LjUuOSwxbDIuOSwxNi4xLDIsMTEuM2MwLC40LDAsLjctLjMsMS0uMi4zLS42LjQtLjkuNGwtMTIuNy0uNy0xNC4zLS44Yy0uNSwwLS45LS4zLTEuMS0uOC0uMi0uNCwwLTEsLjMtMS4zbDUuOS01LjZjLTMuNy0yLjQtOC00LTEyLjUtNC42LTEuNCwwLTIuOC0uMi00LjMtLjEtMTcsLjItMzAuNiwxNC4xLTMwLjUsMzEuMS4yLDE3LDE0LjEsMzAuNiwzMS4xLDMwLjUsMTctLjIsMzAuNi0xNC4xLDMwLjUtMzEuMSwwLTEuNS0uMi0yLjktLjQtNC40bDE2LjQtNi4yYy43LDMuMiwxLjEsNi42LDEuMiwxMC4xLjMsMjYuNS0yMSw0OC4yLTQ3LjUsNDguNEMyMS45LDEwNC4yLjIsODIuOSwwLDU2LjQtLjIsMzYuNywxMS42LDE5LjYsMjguNSwxMi4xIi8+CiAgPHBhdGggY2xhc3M9InN0MCIgZD0iTTQ4LjcsNDcuOGMyLjgsMCw1LTIuMiw1LTVzLTIuMi01LTUtNS01LDIuMi01LDUsMi4yLDUsNSw1WiIvPgogIDxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0zNjAuOSwzNS4wMmM0LjksMCw2LjksNS4zLDYuOSwxMC40cy0yLjYsMTAuNS02LjksMTAuNS03LjEtNC41LTcuMS0xMC40LDItMTAuNCw3LjEtMTAuNE0zNjEuMywyNy4zMmMtMTEuMiwwLTE4LjYsNy4yLTE4LjYsMTguNXM3LjgsMTcuOSwxOCwxNy45LDE4LjMtNS44LDE4LjMtMTguNS03LjEtMTcuOC0xNy43LTE3LjhNMzA1LjUsMjguMTJsMTEuNSwxNy0xMS44LDE3LjdoMTEuOWwzLjMtNi4yYy45LTEuNywxLjgtMy40LDIuNi01LjNoLjJjLjksMS44LDEuNywzLjUsMi43LDUuM2wzLjUsNi4yaDEyLjJsLTExLjYtMTguMiwxMS40LTE2LjVoLTExLjdsLTMuMSw1LjdjLS45LDEuNy0xLjgsMy40LTIuNyw1LjNoLS4xYy0uOS0xLjctMS44LTMuNC0yLjgtNS4ybC0zLjQtNS44aC0xMi4xWk0yOTUuNCwxMy4xMmMtMy41LDAtNS43LDIuMy01LjcsNS40czIuMiw1LjQsNS42LDUuNCw1LjgtMi40LDUuOC01LjQtMi4yLTUuNC01LjctNS40Wk0zMDAuNywyOC4xMmgtMTAuOHYzNC43aDEwLjhWMjguMTJaTTI3MC40LDYyLjgyaDEwLjhWMTIuNDJoLTEwLjh2NTAuNFoiLz4KICA8cGF0aCBjbGFzcz0ic3QxIiBkPSJNMjQ1LjcsMzUuMDJjNC45LDAsNi45LDUuMyw2LjksMTAuNHMtMi42LDEwLjUtNi45LDEwLjUtNy4xLTQuNS03LjEtMTAuNCwyLTEwLjQsNy4xLTEwLjRNMjQ2LDI3LjMyYy0xMS4yLDAtMTguNiw3LjItMTguNiwxOC41czcuOCwxNy45LDE4LDE3LjksMTguMy01LjgsMTguMy0xOC41LTcuMS0xNy44LTE3LjctMTcuOE0yMDUuMiwyMS42MnY2LjVoLTQuNnY4aDQuNnYxNC4yYzAsNC45LDEsOC4yLDMsMTAuMywxLjgsMS44LDQuNywzLDguMiwzczUuNi0uNCw3LS45di04LjJjLTEuMS4yLTEuOC4zLTMuMy4zLTMuMiwwLTQuMy0xLjktNC4zLTYuMXYtMTIuNmg3Ljd2LThoLTcuN3YtOS40bC0xMC42LDIuOVpNMTg1LjMsNTAuMjJjMCwuNiwwLDEuMy0uMiwxLjgtLjcsMi4yLTMsNC01LjYsNHMtNC4zLTEuMy00LjMtNC4xYzAtNC4xLDQuNC01LjUsMTAuMS01LjV2My44Wk0xOTUuNyw0Mi4zMmMwLTguMi0zLjYtMTUtMTUuMi0xNXMtMTEuMSwxLjgtMTMuNSwzLjFsMiw3YzIuMy0xLjQsNi0yLjYsOS42LTIuNiw1LjMsMCw2LjMsMi42LDYuMyw0LjV2LjRjLTEyLjMsMC0yMC40LDQuMy0yMC40LDEzLjNzNC4yLDEwLjYsMTEuMiwxMC42LDcuNy0xLjUsOS45LTQuM2guMmwuNiwzLjVoOS43Yy0uNC0xLjktLjYtNS4xLS42LTguNHYtMTIuMWguMlpNMTQwLjYsNjIuODJoMTAuOHYtMTcuNmMwLS45LDAtMS43LjItMi40LjctMy4zLDMuNC01LjUsNy40LTUuNXMyLjEuMSwyLjkuM3YtMTAuMmMtLjgtLjEtMS4zLS4yLTIuMy0uMi0zLjQsMC03LjYsMi4xLTkuNCw3LjJoLS4zbC0uNC02LjRoLTkuMmMuMiwzLC4zLDYuMy4zLDExLjR2MjMuNFpNMTE2LjEsMjEuNjJ2Ni41aC00LjZ2OGg0LjZ2MTQuMmMwLDQuOSwxLDguMiwzLDEwLjMsMS44LDEuOCw0LjcsMyw4LjIsM3M1LjYtLjQsNy0uOXYtOC4yYy0xLjEuMi0xLjguMy0zLjMuMy0zLjIsMC00LjMtMS45LTQuMy02LjF2LTEyLjZoNy43di04aC03Ljd2LTkuNGwtMTAuNiwyLjlaIi8+CiAgPHBhdGggY2xhc3M9InN0MSIgZD0iTTM3MC45LDg1LjUyYy44LjQsMiwuOCwzLjQuOCwzLDAsNC41LTEuNCw0LjUtMy40LDAtMS41LS44LTIuNi0yLjgtMy4zLTEuMy0uNS0xLjctLjctMS43LTEuMnMuNS0uOCwxLjItLjgsMS44LjMsMi4zLjZsLjYtMi4zYy0uNi0uMy0xLjctLjYtMy0uNi0yLjYsMC00LjMsMS41LTQuMywzLjUsMCwxLjIuOCwyLjQsMywzLjIsMS4yLjQsMS41LjcsMS41LDEuMnMtLjQuOS0xLjQuOS0yLjItLjQtMi44LS44bC0uNiwyLjMuMS0uMVpNMzY0LDc3LjYyYzEuNSwwLDIuMSwxLjYsMi4xLDMuMXMtLjgsMy4yLTIuMSwzLjItMi4yLTEuNC0yLjItMy4yLjYtMy4yLDIuMi0zLjJNMzY0LjEsNzUuMjJjLTMuNCwwLTUuNiwyLjItNS42LDUuNnMyLjQsNS40LDUuNSw1LjQsNS42LTEuOCw1LjYtNS42LTIuMi01LjQtNS40LTUuNE0zNDYuNCw4Ni4wMmgzLjN2LTYuMWMwLS4zLDAtLjYuMS0uOC4yLS42LjgtMS4yLDEuNy0xLjJzMS43LjksMS43LDIuM3Y1LjhoMy4zdi02LjJjMC0zLjEtMS42LTQuNS0zLjgtNC41cy0yLjgsMS0zLjMsMS43di0xLjVoLTN2MTAuNi0uMVpNMzQwLjcsODIuMjJ2LjZjLS4yLjctLjksMS4yLTEuNywxLjJzLTEuMy0uNC0xLjMtMS4yYzAtMS4yLDEuMy0xLjcsMy4xLTEuN3YxLjFoLS4xWk0zNDMuOCw3OS44MmMwLTIuNS0xLjEtNC42LTQuNi00LjZzLTMuNC41LTQuMS45bC42LDIuMWMuNy0uNCwxLjgtLjgsMi45LS44LDEuNiwwLDEuOS44LDEuOSwxLjQtMy43LjEtNi4yLDEuNC02LjIsNC4yczEuMywzLjIsMy40LDMuMiwyLjMtLjUsMy0xLjNsLjIsMS4xaDNjLS4xLS42LS4yLTEuNi0uMi0yLjV2LTMuN2guMVpNMzI1LjUsODAuMDJ2LS42Yy4yLS45LDEtMS42LDEuOS0xLjYsMS41LDAsMi4zLDEuMywyLjMsMi45cy0uOSwzLTIuMywzLTEuNy0uNy0xLjktMS41di0yLjJaTTMyMi4yLDgyLjkydjMuMWgyLjh2LTEuNWguMmMuNywxLjIsMS45LDEuNywzLjIsMS43LDIuNCwwLDQuOC0xLjksNC44LTUuNywwLTMuMi0xLjgtNS4zLTQuMy01LjNzLTIuNi42LTMuMiwxLjV2LTZoLTMuM3YxMi4yaC0uMlpNMzE0LjEsODYuMDJoMy4zdi02Yy4yLTEsMS0xLjcsMi4yLTEuN3MuNiwwLC45LDB2LTMuMWgtLjdjLTEsMC0yLjMuNi0yLjgsMi4ydi0xLjloLTIuOXYxMC42LS4xWk0zMTEuNCw3NS41MmgtMy4zdjYuM2MwLC4zLDAsLjUtLjEuNy0uMi41LS43LDEuMS0xLjYsMS4xcy0xLjctLjktMS43LTIuNXYtNS43aC0zLjN2Ni4yYzAsMy4zLDEuNiw0LjYsMy43LDQuNnMyLjktMS4xLDMuMy0xLjdsLjIsMS41aDIuOHYtMTAuNi4xWk0yODcuMiw4NS41MmMuOC40LDIsLjgsMy40LjgsMywwLDQuNS0xLjQsNC41LTMuNCwwLTEuNS0uOC0yLjYtMi44LTMuMy0xLjMtLjUtMS43LS43LTEuNy0xLjJzLjQtLjgsMS4yLS44LDEuOC4zLDIuMy42bC42LTIuM2MtLjYtLjMtMS43LS42LTMtLjYtMi42LDAtNC4zLDEuNS00LjMsMy41LDAsMS4yLjgsMi40LDMsMy4yLDEuMi40LDEuNS43LDEuNSwxLjJzLS40LjktMS40LjktMi4yLS40LTIuOC0uOGwtLjYsMi4zLjEtLjFaTTI4MC4zLDc3LjYyYzEuNSwwLDIuMSwxLjYsMi4xLDMuMXMtLjgsMy4yLTIuMSwzLjItMi4yLTEuNC0yLjItMy4yLjYtMy4yLDIuMi0zLjJNMjgwLjQsNzUuMjJjLTMuNCwwLTUuNiwyLjItNS42LDUuNnMyLjQsNS40LDUuNSw1LjQsNS42LTEuOCw1LjYtNS42LTIuMi01LjQtNS40LTUuNE0yNzIuNyw3NS41MmgtMy4zdjYuM2MwLC4zLDAsLjUtLjEuNy0uMi41LS43LDEuMS0xLjYsMS4xcy0xLjctLjktMS43LTIuNXYtNS43aC0zLjN2Ni4yYzAsMy4zLDEuNSw0LjYsMy43LDQuNnMyLjktMS4xLDMuMy0xLjd2MS41aDN2LTEwLjYuMVpNMjU2LjksODEuMzJ2LjhjLS4yLjktMSwxLjYtMS45LDEuNi0xLjQsMC0yLjItMS4xLTIuMi0yLjlzLjgtMywyLjMtMywxLjcuNywxLjksMS42djJsLS4xLS4xWk0yNTYuOSw3MC43MnY1LjdjLS41LS43LTEuNS0xLjItMi44LTEuMi0yLjUsMC00LjcsMi4xLTQuNyw1LjYsMCwzLjMsMiw1LjQsNC41LDUuNHMyLjctLjYsMy4zLTEuOHYxLjVoM3YtMTUuM2gtMy4zdi4xWk0yNDYuMiw3MC45MmwtMS45LDMuM2gyLjJsMi42LTMuM2gtMywuMVpNMjQ3LjMsNzUuNTJoLTMuM3YxMC41aDMuM3YtMTAuNVpNMjM0LjEsODUuNTJjLjguNCwyLC44LDMuNC44LDMsMCw0LjUtMS40LDQuNS0zLjQsMC0xLjUtLjgtMi42LTIuOC0zLjMtMS4zLS41LTEuNy0uNy0xLjctMS4ycy41LS44LDEuMi0uOCwxLjguMywyLjMuNmwuNi0yLjNjLS42LS4zLTEuNy0uNi0zLS42LTIuNiwwLTQuMywxLjUtNC4zLDMuNSwwLDEuMi44LDIuNCwzLDMuMiwxLjIuNCwxLjUuNywxLjUsMS4ycy0uNC45LTEuNC45LTIuMi0uNC0yLjgtLjhsLS42LDIuMy4xLS4xWk0yMjUuOCw3OS42MmMwLS45LjYtMi4xLDItMi4xczEuOSwxLjMsMS45LDIuMWgtMy45Wk0yMzIuNiw4MS44MmMwLS4yLjEtLjcuMS0xLjMsMC0yLjYtMS4zLTUuMy00LjctNS4zcy01LjMsMy01LjMsNS42LDIsNS40LDUuNiw1LjQsMi43LS4yLDMuOC0uN2wtLjQtMi4yYy0uOS4zLTEuOC41LTIuOS41cy0yLjktLjYtMy0yaDYuOFpNMjE1LjMsODYuMDJoMy4zdi02Yy4yLTEsMS0xLjcsMi4yLTEuN3MuNiwwLC45LDB2LTMuMWgtLjdjLTEsMC0yLjMuNi0yLjgsMi4ydi0xLjloLTIuOXYxMC42LS4xWk0yMDIuMSw3OS42MmMwLS45LjYtMi4xLDItMi4xczEuOSwxLjMsMS45LDIuMWgtMy45Wk0yMDguOSw4MS44MmMwLS4yLjEtLjcuMS0xLjMsMC0yLjYtMS4zLTUuMy00LjctNS4zcy01LjMsMy01LjMsNS42LDIsNS40LDUuNiw1LjQsMi43LS4yLDMuOC0uN2wtLjQtMi4yYy0uOS4zLTEuOC41LTIuOS41cy0yLjktLjYtMy0yaDYuOFpNMTkzLjcsODEuMzJ2LjhjLS4yLjktMSwxLjYtMS45LDEuNi0xLjQsMC0yLjItMS4xLTIuMi0yLjlzLjgtMywyLjMtMywxLjcuNywxLjksMS42djJsLS4xLS4xWk0xOTMuNyw3MC43MnY1LjdjLS41LS43LTEuNS0xLjItMi44LTEuMi0yLjUsMC00LjcsMi4xLTQuNyw1LjYsMCwzLjMsMiw1LjQsNC41LDUuNHMyLjYtLjYsMy4zLTEuOHYxLjVoM3YtMTUuM2gtMy4zdi4xWk0xNzQuOSw3Ny42MmMxLjUsMCwyLjEsMS42LDIuMSwzLjFzLS44LDMuMi0yLjEsMy4yLTIuMi0xLjQtMi4yLTMuMi42LTMuMiwyLjItMy4yTTE3NSw3NS4yMmMtMy40LDAtNS42LDIuMi01LjYsNS42czIuNCw1LjQsNS41LDUuNCw1LjYtMS44LDUuNi01LjYtMi4yLTUuNC01LjQtNS40TTE2MS4yLDc0LjAyYzAtLjYuMi0xLC41LTFzLjQuMS44LjNjLjUuMi45LjUsMS41LjUsMS4xLDAsMS44LS44LDEuOC0yLjhoLTEuNWMwLC44LS4yLjktLjYuOXMtLjYtLjItLjktLjRjLS40LS4yLS45LS40LTEuNC0uNC0xLjEsMC0xLjgsMS0xLjgsMi44aDEuNnYuMVpNMTY0LjIsODIuMjJ2LjZjLS4yLjctLjksMS4yLTEuNywxLjJzLTEuMy0uNC0xLjMtMS4yYzAtMS4yLDEuMy0xLjcsMy4xLTEuN3YxLjFoLS4xWk0xNjcuMyw3OS44MmMwLTIuNS0xLjEtNC42LTQuNi00LjZzLTMuNC41LTQuMS45bC42LDIuMWMuNy0uNCwxLjgtLjgsMi45LS44LDEuNiwwLDEuOS44LDEuOSwxLjQtMy43LjEtNi4yLDEuNC02LjIsNC4yczEuMywzLjIsMy40LDMuMiwyLjMtLjUsMy0xLjNsLjIsMS4xaDNjLS4xLS42LS4yLTEuNi0uMi0yLjV2LTMuN2guMVpNMTUxLjEsNzMuNTJ2MmgtMS40djIuNGgxLjR2NC4zYzAsMS41LjMsMi41LjksMy4xLjUuNSwxLjQuOSwyLjUuOXMxLjctLjEsMi4xLS4zdi0yLjVoLTFjLTEsMC0xLjMtLjYtMS4zLTEuOXYtMy44aDIuM3YtMi40aC0yLjN2LTIuOGwtMy4yLjl2LjFaTTE0MC43LDg1LjUyYy44LjQsMiwuOCwzLjQuOCwzLDAsNC41LTEuNCw0LjUtMy40LDAtMS41LS44LTIuNi0yLjgtMy4zLTEuMy0uNS0xLjctLjctMS43LTEuMnMuNS0uOCwxLjMtLjgsMS44LjMsMi4zLjZsLjYtMi4zYy0uNi0uMy0xLjctLjYtMy0uNi0yLjYsMC00LjMsMS41LTQuMywzLjUsMCwxLjIuOCwyLjQsMywzLjIsMS4yLjQsMS41LjcsMS41LDEuMnMtLjQuOS0xLjQuOS0yLjItLjQtMi44LS44bC0uNiwyLjN2LS4xWk0xMzIuNCw3OS42MmMwLS45LjYtMi4xLDItMi4xczEuOSwxLjMsMS45LDIuMWgtMy45Wk0xMzkuMiw4MS44MmMwLS4yLjEtLjcuMS0xLjMsMC0yLjYtMS4zLTUuMy00LjctNS4zcy01LjMsMy01LjMsNS42LDIsNS40LDUuNiw1LjQsMi43LS4yLDMuOC0uN2wtLjQtMi4yYy0uOS4zLTEuOC41LTIuOS41cy0yLjktLjYtMy0yaDYuOFpNMTI0LDgxLjMyYzAsLjMsMCwuNi0uMS45LS4yLjgtLjksMS4zLTEuNywxLjMtMS40LDAtMi4xLTEuMi0yLjEtMi44cy45LTMsMi4yLTMsMS41LjYsMS44LDEuNHYyLjFsLS4xLjFaTTEyNy4zLDc4LjYydi0zLjFoLTIuOHYxLjNoLS4yYy0uNS0uOS0xLjQtMS41LTIuOS0xLjUtMi42LDAtNC44LDIuMi00LjgsNS42czEuOSw1LjEsNC41LDUuMSwyLjItLjUsMi44LTEuNHYuN2MwLDItMS4yLDIuOC0yLjcsMi44cy0yLjQtLjQtMy4xLS44bC0uNiwyLjVjLjkuNSwyLjQuOCwzLjguOHMzLjEtLjMsNC4zLTEuM2MxLjItMS4xLDEuNi0yLjcsMS42LTQuN3YtNS45bC4xLS4xWiIvPgo8L3N2Zz4=" alt="Tratolixo" style="height:32px;margin-bottom:12px;">
+    <div class="go-icon-big"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="#00583d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+    <h2>Relatório de Reciclagem</h2>
+  </div>
+  <div id="record-banner">
+    <div class="rb-title">🏆 Novo Recorde!</div>
+    <div class="rb-score" id="record-score">0</div>
+  </div>
+  <div class="scores-row">
+    <div class="score-box"><div class="sv" id="go-score" style="color:var(--brand)">0</div><div class="sl">Pontos</div></div>
+    <div class="score-box"><div class="sv" id="go-best" style="color:var(--gold)">0</div><div class="sl">🏆 Recorde</div></div>
+    <div class="score-box"><div class="sv" id="go-acc" style="color:var(--green)">0%</div><div class="sl">Precisão</div></div>
+  </div>
+
+  <div class="section-title" id="badges-title" style="display:none">🏅 Conquistas Desbloqueadas</div>
+  <div id="badges-grid"></div>
+
+  <div class="section-title">Desempenho por Ecoponto</div>
+  <div class="bin-stats" id="bin-stats"></div>
+
+  <button class="btn-primary" id="btn-restart">Jogar Novamente</button>
+  <button class="btn-secondary" id="btn-menu">Menu Principal</button>
+</div>
+
+<script>
+// ════ AUDIO ════
+let audioCtx=null;
+function ac(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx;}
+
+function snd(type){
+  try{
+    const c=ac(),t=c.currentTime;
+    if(type==='wrong'){
+      const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);
+      o.type='sawtooth';o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(80,t+.22);
+      g.gain.setValueAtTime(.18,t);g.gain.exponentialRampToValueAtTime(.001,t+.25);
+      o.start();o.stop(t+.25);
+    }else if(type==='change'){
+      [0,.18].forEach((d,i)=>{
+        const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);
+        o.type='sine';o.frequency.setValueAtTime(i===0?523:392,t+d);
+        g.gain.setValueAtTime(.26,t+d);g.gain.exponentialRampToValueAtTime(.001,t+d+.35);
+        o.start(t+d);o.stop(t+d+.35);
+      });
+    }else if(type==='combo'){
+      // ascending fanfare — pitch changes with multiplier level
+      const multi=arguments[1]||2;
+      const baseFreqs={2:[523,659,784],3:[587,740,880],4:[659,830,988],5:[784,988,1175]};
+      const freqs=baseFreqs[multi]||baseFreqs[2];
+      freqs.forEach((f,i)=>{
+        const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);
+        o.type='sine';o.frequency.setValueAtTime(f,t+i*.09);
+        g.gain.setValueAtTime(.2,t+i*.09);g.gain.exponentialRampToValueAtTime(.001,t+i*.09+.28);
+        o.start(t+i*.09);o.stop(t+i*.09+.3);
+      });
+    }else if(type==='gameover'){
+      [0,.18,.36,.54].forEach((d,i)=>{
+        const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);
+        o.type='sine';o.frequency.setValueAtTime([392,330,262,196][i],t+d);
+        g.gain.setValueAtTime(.22,t+d);g.gain.exponentialRampToValueAtTime(.001,t+d+.35);
+        o.start(t+d);o.stop(t+d+.4);
+      });
+    }
+  }catch(e){}
+}
+
+// ════ DATA ════
+const BINS=[
+  {id:'blue',  name:'Azul',    label:'Papel',             color:'#4BAED6',colorLight:'#76CDE8',glow:'rgba(75,174,214,0.35)'},
+  {id:'yellow',name:'Amarelo', label:'Plástico',          color:'#F0A830',colorLight:'#F5C46A',glow:'rgba(240,168,48,0.35)'},
+  {id:'green', name:'Verde',   label:'Vidro',             color:'#6DBE45',colorLight:'#96D46E',glow:'rgba(109,190,69,0.35)'},
+  {id:'brown', name:'Castanho',label:'Biorresíduos',      color:'#C97040',colorLight:'#E09060',glow:'rgba(201,112,64,0.35)'},
+];
+
+// ════ BIN IMAGES ════
+const BIN_IMGS = {
+  blue:   new Image(),
+  yellow: new Image(),
+  green:  new Image(),
+  brown:  new Image(),
+};
+BIN_IMGS.blue.src   = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iTGF5ZXJfMiIgZGF0YS1uYW1lPSJMYXllciAyIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2aWV3Qm94PSIwIDAgMjg2LjQgMzQxLjg5Ij4KICA8ZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmNscy0xIHsKICAgICAgICBmaWxsOiB1cmwoI1/DgsOBX8OPX8OMw4xfw4hfw4vDgsOMw5pfODY2KTsKICAgICAgfQoKICAgICAgLmNscy0yIHsKICAgICAgICBmaWxsOiB1cmwoI1/DgsOBX8OPX8OMw4xfw4hfw4vDgsOMw5pfODY2LTMpOwogICAgICB9CgogICAgICAuY2xzLTMgewogICAgICAgIGZpbGw6IHVybCgjX8OCw4Ffw49fw4zDjF/DiF/Di8OCw4zDml84NjYtMik7CiAgICAgIH0KCiAgICAgIC5jbHMtNCB7CiAgICAgICAgZmlsbDogI2ZmZjsKICAgICAgfQoKICAgICAgLmNscy01IHsKICAgICAgICBmaWxsOiAjM2QzZjNlOwogICAgICAgIHN0cm9rZTogIzNlNjA2ODsKICAgICAgICBzdHJva2UtbWl0ZXJsaW1pdDogMTA7CiAgICAgIH0KICAgIDwvc3R5bGU+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9Il/DgsOBX8OPX8OMw4xfw4hfw4vDgsOMw5pfODY2IiBkYXRhLW5hbWU9IsKhw4LDgcuaw4/Lh8OMw4zLmsOIIOKAnu+jv+KAoeKAsMOLw4LDjMOaIDg2NiIgeDE9Ii0yMzAuOTQiIHkxPSI3LjE4IiB4Mj0iMzA3Ljk0IiB5Mj0iMjM4LjMzIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CiAgICAgIDxzdG9wIG9mZnNldD0iLjMxIiBzdG9wLWNvbG9yPSIjMDA2MzdlIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iLjM4IiBzdG9wLWNvbG9yPSIjMDA2NDdmIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iLjQiIHN0b3AtY29sb3I9IiMwMDY5ODYiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIuNDIiIHN0b3AtY29sb3I9IiMwMDcxOTEiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIuNDMiIHN0b3AtY29sb3I9IiMwMDc4OWQiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIuNDYiIHN0b3AtY29sb3I9IiMwMDg1YjIiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIuNDkiIHN0b3AtY29sb3I9IiMwMDhkYmUiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIuNTIiIHN0b3AtY29sb3I9IiMwMDkwYzMiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIuODkiIHN0b3AtY29sb3I9IiMwMDhiYmEiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIuOTIiIHN0b3AtY29sb3I9IiMwMDg0YjAiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIuOTciIHN0b3AtY29sb3I9IiMwMDc0OTUiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMDA2NzgwIi8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJfw4LDgV/Dj1/DjMOMX8OIX8OLw4LDjMOaXzg2Ni0yIiBkYXRhLW5hbWU9IsKhw4LDgcuaw4/Lh8OMw4zLmsOIIOKAnu+jv+KAoeKAsMOLw4LDjMOaIDg2NiIgeDE9Ii0xMDAuMjYiIHkxPSItMTg4LjM5IiB4Mj0iMjUyLjUyIiB5Mj0iMTAwLjUiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjg3LjY4IDIzLjAxKSByb3RhdGUoLTE4MCkiIHhsaW5rOmhyZWY9IiNfw4LDgV/Dj1/DjMOMX8OIX8OLw4LDjMOaXzg2NiIvPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJfw4LDgV/Dj1/DjMOMX8OIX8OLw4LDjMOaXzg2Ni0zIiBkYXRhLW5hbWU9IsKhw4LDgcuaw4/Lh8OMw4zLmsOIIOKAnu+jv+KAoeKAsMOLw4LDjMOaIDg2NiIgeDE9IjEzOS4wNSIgeTE9IjIyLjA2IiB4Mj0iNDE4LjIyIiB5Mj0iMTc3LjYyIiB4bGluazpocmVmPSIjX8OCw4Ffw49fw4zDjF/DiF/Di8OCw4zDml84NjYiLz4KICA8L2RlZnM+CiAgPGcgaWQ9ImF6dWwiPgogICAgPGc+CiAgICAgIDxnPgogICAgICAgIDxyZWN0IGNsYXNzPSJjbHMtNSIgeD0iMTIuNTEiIHk9IjI4My44OCIgd2lkdGg9IjI1OS41NiIgaGVpZ2h0PSI5Ljg2IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyODQuNTggNTc3LjYxKSByb3RhdGUoMTgwKSIvPgogICAgICAgIDxnPgogICAgICAgICAgPHBhdGggY2xhc3M9ImNscy01IiBkPSJNMTEuODYsMjQ2LjA4aDExLjM2YzYuMjgsMCwxMS4zNyw1LjQsMTEuMzcsMTIuMDV2NzEuMjFjMCw2LjY2LTUuMDksMTIuMDUtMTEuMzcsMTIuMDVoLTExLjM2Yy02LjI3LDAtMTEuMzYtNS40LTExLjM2LTEyLjA1di03MS4yMWMwLTYuNjUsNS4wOS0xMi4wNSwxMS4zNi0xMi4wNVoiLz4KICAgICAgICAgIDxwYXRoIGNsYXNzPSJjbHMtNSIgZD0iTTI2MC41OCwyNDYuMDhoMTEuMzZjNi4yOCwwLDExLjM3LDUuNCwxMS4zNywxMi4wNXY3MS4yMWMwLDYuNjYtNS4wOSwxMi4wNS0xMS4zNywxMi4wNWgtMTEuMzZjLTYuMjgsMC0xMS4zNy01LjQtMTEuMzctMTIuMDV2LTcxLjIxYzAtNi42NSw1LjA5LTEyLjA1LDExLjM3LTEyLjA1WiIvPgogICAgICAgIDwvZz4KICAgICAgPC9nPgogICAgICA8cGF0aCBjbGFzcz0iY2xzLTEiIGQ9Ik0yNjAuOCw5LjI3bC0yMi45OSwzMTMuOTZjLS41NiwxMC4xOS04LjUyLDE4LjE2LTE4LjE1LDE4LjE2SDY0LjkyYy05LjYzLDAtMTcuNTktNy45Ni0xOC4xNS0xOC4xNkwyMy43OCw5LjI3aDIzNy4wMloiLz4KICAgICAgPHJlY3QgY2xhc3M9ImNscy0zIiB4PSIxLjI4IiB3aWR0aD0iMjg1LjEyIiBoZWlnaHQ9IjIzLjAxIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyODcuNjggMjMuMDEpIHJvdGF0ZSgxODApIi8+CiAgICAgIDxwb2x5Z29uIGNsYXNzPSJjbHMtMiIgcG9pbnRzPSIxLjI4IDIzLjAxIDI4Ni40IDIzLjAxIDI1OC41MSA0MC4yNiAyNi4wNyA0MC4yNiAxLjI4IDIzLjAxIi8+CiAgICA8L2c+CiAgPC9nPgogIDxnIGlkPSJ2ZXJkZSI+CiAgICA8Zz4KICAgICAgPHBhdGggY2xhc3M9ImNscy00IiBkPSJNMTMxLjYzLDE4MC4xMmMtMS4yNCwyLjYxLTEuOTIsNS4zNi0xLjkyLDguMzh2NC4xMmgxMS41NHYtNC4xMmMwLTMuMDIuOTYtNS41LDIuNzUtNy40MnM0LjQtMi43NSw3LjU2LTIuNzUsNS43Ny45Niw3LjU2LDIuNzVjMS43OSwxLjkyLDIuNzUsNC40LDIuNzUsNy40MnY0LjEyaDExLjU0di00LjEyYzAtMi44OS0uNjktNS43Ny0xLjkyLTguMzgtMS4yNC0yLjYxLTMuMDItNC45NS01LjM2LTYuODcsMi4zNC0xLjkyLDMuOTktNC4xMiw1LjM2LTYuNzMsMS4yNC0yLjYxLDEuOTItNS4zNiwxLjkyLTguMzh2LTQuMTJoLTExLjU0djQuMTJjMCwzLjAyLS45Niw1LjUtMi43NSw3LjQyLTEuNzksMS45Mi00LjQsMi43NS03LjU2LDIuNzVzLTUuNzctLjk2LTcuNTYtMi43NWMtMS43OS0xLjkyLTIuNzUtNC40LTIuNzUtNy40MnYtNC4xMmgtMTEuNTR2NC4xMmMwLDMuMDIuNjksNS43NywxLjkyLDguMzgsMS4yNCwyLjYxLDMuMDIsNC44MSw1LjM2LDYuNzMtMi4zNCwxLjkyLTMuOTksNC4xMi01LjM2LDYuODdaIi8+CiAgICAgIDxwYXRoIGNsYXNzPSJjbHMtNCIgZD0iTTEyNC4wNywxMDcuODNzLjE0LDAsLjI3LS4xNGM3LjgzLTMuNDQsMTYuNjMtNS4zNiwyNS43LTUuNWg0LjI2Yy45NiwwLDEuOTIuMTQsMy4wMi4yN2guNDFjMTEuNTQsMS4yNCwyMi4yNiw1LjUsMzEuMiwxMS45Nmw2LjQ2LTkuNDhjLjQxLS41NSwxLjEtLjgyLDEuNjUtLjY5LjY5LjE0LDEuMS42OSwxLjI0LDEuMzdsMy45OSwyMi4xMywyLjc1LDE1LjUzYzAsLjU1LDAsLjk2LS40MSwxLjM3LS4yNy40MS0uODIuNTUtMS4yNC41NWwtMTcuNDUtLjk2LTE5LjY1LTEuMWMtLjY5LDAtMS4yNC0uNDEtMS41MS0xLjEtLjI3LS41NSwwLTEuMzcuNDEtMS43OWw4LjExLTcuN2MtNS4wOC0zLjMtMTAuOTktNS41LTE3LjE4LTYuMzItMS45MiwwLTMuODUtLjI3LTUuOTEtLjE0LTIzLjM2LjI3LTQyLjA1LDE5LjM4LTQxLjkxLDQyLjc0LjI3LDIzLjM2LDE5LjM4LDQyLjA1LDQyLjc0LDQxLjkxLDIzLjM2LS4yNyw0Mi4wNS0xOS4zOCw0MS45MS00Mi43NCwwLTIuMDYtLjI3LTMuOTktLjU1LTYuMDVsMjIuNTQtOC41MmMuOTYsNC40LDEuNTEsOS4wNywxLjY1LDEzLjg4LjQxLDM2LjQyLTI4Ljg2LDY2LjI0LTY1LjI4LDY2LjUxLTM2LjQyLjQxLTY2LjI0LTI4Ljg2LTY2LjUxLTY1LjI4LS4yNy0yNy4wNywxNS45NC01MC41NywzOS4xNy02MC44OCIvPgogICAgICA8cGF0aCBjbGFzcz0iY2xzLTQiIGQ9Ik0xNTEuNjksMTU2Ljc1YzMuODUsMCw2Ljg3LTMuMDIsNi44Ny02Ljg3cy0zLjAyLTYuODctNi44Ny02Ljg3LTYuODcsMy4wMi02Ljg3LDYuODcsMy4wMiw2Ljg3LDYuODcsNi44N1oiLz4KICAgIDwvZz4KICA8L2c+Cjwvc3ZnPg==';
+BIN_IMGS.yellow.src = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iTGF5ZXJfMiIgZGF0YS1uYW1lPSJMYXllciAyIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2aWV3Qm94PSIwIDAgMjg2LjQgMzQxLjg5Ij4KICA8ZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmNscy0xIHsKICAgICAgICBmaWxsOiB1cmwoI2xpbmVhci1ncmFkaWVudC0zKTsKICAgICAgfQoKICAgICAgLmNscy0yIHsKICAgICAgICBmaWxsOiB1cmwoI2xpbmVhci1ncmFkaWVudC0yKTsKICAgICAgfQoKICAgICAgLmNscy0zIHsKICAgICAgICBmaWxsOiB1cmwoI2xpbmVhci1ncmFkaWVudCk7CiAgICAgIH0KCiAgICAgIC5jbHMtNCB7CiAgICAgICAgZmlsbDogI2ZmZjsKICAgICAgfQoKICAgICAgLmNscy01IHsKICAgICAgICBmaWxsOiAjM2QzZjNlOwogICAgICAgIHN0cm9rZTogIzNlNjA2ODsKICAgICAgICBzdHJva2UtbWl0ZXJsaW1pdDogMTA7CiAgICAgIH0KICAgIDwvc3R5bGU+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImxpbmVhci1ncmFkaWVudCIgeDE9Ii0xNy40IiB5MT0iLTI0LjA1IiB4Mj0iMjc2LjE0IiB5Mj0iMzA4LjcyIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2U0N2MwMCIvPgogICAgICA8c3RvcCBvZmZzZXQ9Ii4wMyIgc3RvcC1jb2xvcj0iI2U0N2QwMCIvPgogICAgICA8c3RvcCBvZmZzZXQ9Ii4wNCIgc3RvcC1jb2xvcj0iI2U0ODQwMCIvPgogICAgICA8c3RvcCBvZmZzZXQ9Ii4wNCIgc3RvcC1jb2xvcj0iI2U0OTAwMCIvPgogICAgICA8c3RvcCBvZmZzZXQ9Ii4wNSIgc3RvcC1jb2xvcj0iI2U0OWMwMCIvPgogICAgICA8c3RvcCBvZmZzZXQ9Ii4xMSIgc3RvcC1jb2xvcj0iI2U3YTYwMCIvPgogICAgICA8c3RvcCBvZmZzZXQ9Ii4yNSIgc3RvcC1jb2xvcj0iI2VkYmIwMCIvPgogICAgICA8c3RvcCBvZmZzZXQ9Ii4zOSIgc3RvcC1jb2xvcj0iI2YwYzcwMCIvPgogICAgICA8c3RvcCBvZmZzZXQ9Ii41MiIgc3RvcC1jb2xvcj0iI2YyY2MwMCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNmMGMzMDAiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZjZiOTAwIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2ZmYWQwMCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ibGluZWFyLWdyYWRpZW50LTIiIHgxPSIxLjI4IiB5MT0iMTEuNSIgeDI9IjI4Ni40IiB5Mj0iMTEuNSIgZ3JhZGllbnRUcmFuc2Zvcm09InRyYW5zbGF0ZSgyODcuNjggMjMuMDEpIHJvdGF0ZSgtMTgwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8c3RvcCBvZmZzZXQ9Ii41MiIgc3RvcC1jb2xvcj0iI2YyY2MwMCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNmMGMzMDAiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImxpbmVhci1ncmFkaWVudC0zIiB4MT0iMTkuNjIiIHkxPSIzMS42MyIgeDI9IjMwNC43NSIgeTI9IjMxLjYzIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CiAgICAgIDxzdG9wIG9mZnNldD0iLjMxIiBzdG9wLWNvbG9yPSIjZTQ3YzAwIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iLjY3IiBzdG9wLWNvbG9yPSIjZTU3ZDAwIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iLjgiIHN0b3AtY29sb3I9IiNlODg0MDAiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIuODkiIHN0b3AtY29sb3I9IiNlZjkwMDAiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIuOTYiIHN0b3AtY29sb3I9IiNmOGExMDAiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZmZhZDAwIi8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8ZyBpZD0iYW1hcmVsbyI+CiAgICA8Zz4KICAgICAgPGc+CiAgICAgICAgPHJlY3QgY2xhc3M9ImNscy01IiB4PSIxMi41MSIgeT0iMjgzLjg4IiB3aWR0aD0iMjU5LjU2IiBoZWlnaHQ9IjkuODYiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDI4NC41OCA1NzcuNjEpIHJvdGF0ZSgxODApIi8+CiAgICAgICAgPGc+CiAgICAgICAgICA8cGF0aCBjbGFzcz0iY2xzLTUiIGQ9Ik0xMS44NiwyNDYuMDhoMTEuMzZjNi4yOCwwLDExLjM3LDUuNCwxMS4zNywxMi4wNXY3MS4yMWMwLDYuNjYtNS4wOSwxMi4wNS0xMS4zNywxMi4wNWgtMTEuMzZjLTYuMjcsMC0xMS4zNi01LjQtMTEuMzYtMTIuMDV2LTcxLjIxYzAtNi42NSw1LjA5LTEyLjA1LDExLjM2LTEyLjA1WiIvPgogICAgICAgICAgPHBhdGggY2xhc3M9ImNscy01IiBkPSJNMjYwLjU4LDI0Ni4wOGgxMS4zNmM2LjI4LDAsMTEuMzcsNS40LDExLjM3LDEyLjA1djcxLjIxYzAsNi42Ni01LjA5LDEyLjA1LTExLjM3LDEyLjA1aC0xMS4zNmMtNi4yOCwwLTExLjM3LTUuNC0xMS4zNy0xMi4wNXYtNzEuMjFjMC02LjY1LDUuMDktMTIuMDUsMTEuMzctMTIuMDVaIi8+CiAgICAgICAgPC9nPgogICAgICA8L2c+CiAgICAgIDxwYXRoIGNsYXNzPSJjbHMtMyIgZD0iTTI2MC44LDEwLjI3bC0yMi45OSwzMTIuOTZjLS41NiwxMC4xOS04LjUyLDE4LjE2LTE4LjE1LDE4LjE2SDY0LjkyYy05LjYzLDAtMTcuNTktNy45Ni0xOC4xNS0xOC4xNkwyMy43OCwxMC4yN2gyMzcuMDJaIi8+CiAgICAgIDxyZWN0IGNsYXNzPSJjbHMtMiIgeD0iMS4yOCIgd2lkdGg9IjI4NS4xMiIgaGVpZ2h0PSIyMy4wMSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjg3LjY4IDIzLjAxKSByb3RhdGUoMTgwKSIvPgogICAgICA8cG9seWdvbiBjbGFzcz0iY2xzLTEiIHBvaW50cz0iMS4yOCAyMy4wMSAyODYuNCAyMy4wMSAyNTguNTEgNDAuMjYgMjYuMDcgNDAuMjYgMS4yOCAyMy4wMSIvPgogICAgPC9nPgogIDwvZz4KICA8ZyBpZD0idmVyZGUiPgogICAgPGc+CiAgICAgIDxwYXRoIGNsYXNzPSJjbHMtNCIgZD0iTTEyMS42MywxODAuMTJjLTEuMjQsMi42MS0xLjkyLDUuMzYtMS45Miw4LjM4djQuMTJoMTEuNTR2LTQuMTJjMC0zLjAyLjk2LTUuNSwyLjc1LTcuNDJzNC40LTIuNzUsNy41Ni0yLjc1LDUuNzcuOTYsNy41NiwyLjc1YzEuNzksMS45MiwyLjc1LDQuNCwyLjc1LDcuNDJ2NC4xMmgxMS41NHYtNC4xMmMwLTIuODktLjY5LTUuNzctMS45Mi04LjM4LTEuMjQtMi42MS0zLjAyLTQuOTUtNS4zNi02Ljg3LDIuMzQtMS45MiwzLjk5LTQuMTIsNS4zNi02LjczLDEuMjQtMi42MSwxLjkyLTUuMzYsMS45Mi04LjM4di00LjEyaC0xMS41NHY0LjEyYzAsMy4wMi0uOTYsNS41LTIuNzUsNy40Mi0xLjc5LDEuOTItNC40LDIuNzUtNy41NiwyLjc1cy01Ljc3LS45Ni03LjU2LTIuNzVjLTEuNzktMS45Mi0yLjc1LTQuNC0yLjc1LTcuNDJ2LTQuMTJoLTExLjU0djQuMTJjMCwzLjAyLjY5LDUuNzcsMS45Miw4LjM4LDEuMjQsMi42MSwzLjAyLDQuODEsNS4zNiw2LjczLTIuMzQsMS45Mi0zLjk5LDQuMTItNS4zNiw2Ljg3WiIvPgogICAgICA8cGF0aCBjbGFzcz0iY2xzLTQiIGQ9Ik0xMTQuMDcsMTA3Ljgzcy4xNCwwLC4yNy0uMTRjNy44My0zLjQ0LDE2LjYzLTUuMzYsMjUuNy01LjVoNC4yNmMuOTYsMCwxLjkyLjE0LDMuMDIuMjdoLjQxYzExLjU0LDEuMjQsMjIuMjYsNS41LDMxLjIsMTEuOTZsNi40Ni05LjQ4Yy40MS0uNTUsMS4xLS44MiwxLjY1LS42OS42OS4xNCwxLjEuNjksMS4yNCwxLjM3bDMuOTksMjIuMTMsMi43NSwxNS41M2MwLC41NSwwLC45Ni0uNDEsMS4zNy0uMjcuNDEtLjgyLjU1LTEuMjQuNTVsLTE3LjQ1LS45Ni0xOS42NS0xLjFjLS42OSwwLTEuMjQtLjQxLTEuNTEtMS4xLS4yNy0uNTUsMC0xLjM3LjQxLTEuNzlsOC4xMS03LjdjLTUuMDgtMy4zLTEwLjk5LTUuNS0xNy4xOC02LjMyLTEuOTIsMC0zLjg1LS4yNy01LjkxLS4xNC0yMy4zNi4yNy00Mi4wNSwxOS4zOC00MS45MSw0Mi43NC4yNywyMy4zNiwxOS4zOCw0Mi4wNSw0Mi43NCw0MS45MSwyMy4zNi0uMjcsNDIuMDUtMTkuMzgsNDEuOTEtNDIuNzQsMC0yLjA2LS4yNy0zLjk5LS41NS02LjA1bDIyLjU0LTguNTJjLjk2LDQuNCwxLjUxLDkuMDcsMS42NSwxMy44OC40MSwzNi40Mi0yOC44Niw2Ni4yNC02NS4yOCw2Ni41MS0zNi40Mi40MS02Ni4yNC0yOC44Ni02Ni41MS02NS4yOC0uMjctMjcuMDcsMTUuOTQtNTAuNTcsMzkuMTctNjAuODgiLz4KICAgICAgPHBhdGggY2xhc3M9ImNscy00IiBkPSJNMTQxLjY5LDE1Ni43NWMzLjg1LDAsNi44Ny0zLjAyLDYuODctNi44N3MtMy4wMi02Ljg3LTYuODctNi44Ny02Ljg3LDMuMDItNi44Nyw2Ljg3LDMuMDIsNi44Nyw2Ljg3LDYuODdaIi8+CiAgICA8L2c+CiAgPC9nPgo8L3N2Zz4=';
+BIN_IMGS.green.src  = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iTGF5ZXJfMiIgZGF0YS1uYW1lPSJMYXllciAyIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2aWV3Qm94PSIwIDAgMjg2LjQgMzQxLjg5Ij4KICA8ZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmNscy0xIHsKICAgICAgICBmaWxsOiB1cmwoI2xpbmVhci1ncmFkaWVudC0zKTsKICAgICAgfQoKICAgICAgLmNscy0yIHsKICAgICAgICBmaWxsOiB1cmwoI2xpbmVhci1ncmFkaWVudC0yKTsKICAgICAgfQoKICAgICAgLmNscy0zIHsKICAgICAgICBmaWxsOiB1cmwoI2xpbmVhci1ncmFkaWVudCk7CiAgICAgIH0KCiAgICAgIC5jbHMtNCB7CiAgICAgICAgZmlsbDogI2ZmZjsKICAgICAgfQoKICAgICAgLmNscy01IHsKICAgICAgICBmaWxsOiAjM2QzZjNlOwogICAgICAgIHN0cm9rZTogIzNlNjA2ODsKICAgICAgICBzdHJva2UtbWl0ZXJsaW1pdDogMTA7CiAgICAgIH0KICAgIDwvc3R5bGU+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImxpbmVhci1ncmFkaWVudCIgeDE9IjIzLjc4IiB5MT0iMTczLjgzIiB4Mj0iMjYwLjgiIHkyPSIxNzMuODMiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIuNTIiIHN0b3AtY29sb3I9IiMwMGI3MDAiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIuODkiIHN0b3AtY29sb3I9IiMwMGFlMDAiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImxpbmVhci1ncmFkaWVudC0yIiB4MT0iMS4yOCIgeTE9IjExLjUiIHgyPSIyODYuNCIgeTI9IjExLjUiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjg3LjY4IDIzLjAxKSByb3RhdGUoLTE4MCkiIHhsaW5rOmhyZWY9IiNsaW5lYXItZ3JhZGllbnQiLz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ibGluZWFyLWdyYWRpZW50LTMiIHgxPSIxLjI4IiB5MT0iMzEuNjMiIHgyPSIyODYuNCIgeTI9IjMxLjYzIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CiAgICAgIDxzdG9wIG9mZnNldD0iLjAyIiBzdG9wLWNvbG9yPSIjMDA4ZDIxIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iLjY5IiBzdG9wLWNvbG9yPSIjMDA2NDI3Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8ZyBpZD0idmVyZGUiPgogICAgPGc+CiAgICAgIDxnPgogICAgICAgIDxyZWN0IGNsYXNzPSJjbHMtNSIgeD0iMTIuNTEiIHk9IjI4My44OCIgd2lkdGg9IjI1OS41NiIgaGVpZ2h0PSI5Ljg2IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyODQuNTggNTc3LjYxKSByb3RhdGUoMTgwKSIvPgogICAgICAgIDxnPgogICAgICAgICAgPHBhdGggY2xhc3M9ImNscy01IiBkPSJNMTEuODYsMjQ2LjA4aDExLjM2YzYuMjgsMCwxMS4zNyw1LjQsMTEuMzcsMTIuMDV2NzEuMjFjMCw2LjY2LTUuMDksMTIuMDUtMTEuMzcsMTIuMDVoLTExLjM2Yy02LjI3LDAtMTEuMzYtNS40LTExLjM2LTEyLjA1di03MS4yMWMwLTYuNjUsNS4wOS0xMi4wNSwxMS4zNi0xMi4wNVoiLz4KICAgICAgICAgIDxwYXRoIGNsYXNzPSJjbHMtNSIgZD0iTTI2MC41OCwyNDYuMDhoMTEuMzZjNi4yOCwwLDExLjM3LDUuNCwxMS4zNywxMi4wNXY3MS4yMWMwLDYuNjYtNS4wOSwxMi4wNS0xMS4zNywxMi4wNWgtMTEuMzZjLTYuMjgsMC0xMS4zNy01LjQtMTEuMzctMTIuMDV2LTcxLjIxYzAtNi42NSw1LjA5LTEyLjA1LDExLjM3LTEyLjA1WiIvPgogICAgICAgIDwvZz4KICAgICAgPC9nPgogICAgICA8cGF0aCBjbGFzcz0iY2xzLTMiIGQ9Ik0yNjAuOCw5LjI3bC0yMi45OSwzMTMuOTZjLS41NiwxMC4xOS04LjUyLDE4LjE2LTE4LjE1LDE4LjE2SDY0LjkyYy05LjYzLDAtMTcuNTktNy45Ni0xOC4xNS0xOC4xNkwyMy43OCw2LjI3bDIzNy4wMiwzWiIvPgogICAgICA8cmVjdCBjbGFzcz0iY2xzLTIiIHg9IjEuMjgiIHdpZHRoPSIyODUuMTIiIGhlaWdodD0iMjMuMDEiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDI4Ny42OCAyMy4wMSkgcm90YXRlKDE4MCkiLz4KICAgICAgPHBvbHlnb24gY2xhc3M9ImNscy0xIiBwb2ludHM9IjEuMjggMjMuMDEgMjg2LjQgMjMuMDEgMjU4LjUxIDQwLjI2IDI2LjA3IDQwLjI2IDEuMjggMjMuMDEiLz4KICAgIDwvZz4KICAgIDxnPgogICAgICA8cGF0aCBjbGFzcz0iY2xzLTQiIGQ9Ik0xMTkuNjMsMTgwLjEyYy0xLjI0LDIuNjEtMS45Miw1LjM2LTEuOTIsOC4zOHY0LjEyaDExLjU0di00LjEyYzAtMy4wMi45Ni01LjUsMi43NS03LjQyczQuNC0yLjc1LDcuNTYtMi43NSw1Ljc3Ljk2LDcuNTYsMi43NWMxLjc5LDEuOTIsMi43NSw0LjQsMi43NSw3LjQydjQuMTJoMTEuNTR2LTQuMTJjMC0yLjg5LS42OS01Ljc3LTEuOTItOC4zOC0xLjI0LTIuNjEtMy4wMi00Ljk1LTUuMzYtNi44NywyLjM0LTEuOTIsMy45OS00LjEyLDUuMzYtNi43MywxLjI0LTIuNjEsMS45Mi01LjM2LDEuOTItOC4zOHYtNC4xMmgtMTEuNTR2NC4xMmMwLDMuMDItLjk2LDUuNS0yLjc1LDcuNDItMS43OSwxLjkyLTQuNCwyLjc1LTcuNTYsMi43NXMtNS43Ny0uOTYtNy41Ni0yLjc1Yy0xLjc5LTEuOTItMi43NS00LjQtMi43NS03LjQydi00LjEyaC0xMS41NHY0LjEyYzAsMy4wMi42OSw1Ljc3LDEuOTIsOC4zOCwxLjI0LDIuNjEsMy4wMiw0LjgxLDUuMzYsNi43My0yLjM0LDEuOTItMy45OSw0LjEyLTUuMzYsNi44N1oiLz4KICAgICAgPHBhdGggY2xhc3M9ImNscy00IiBkPSJNMTEyLjA3LDEwNy44M3MuMTQsMCwuMjctLjE0YzcuODMtMy40NCwxNi42My01LjM2LDI1LjctNS41aDQuMjZjLjk2LDAsMS45Mi4xNCwzLjAyLjI3aC40MWMxMS41NCwxLjI0LDIyLjI2LDUuNSwzMS4yLDExLjk2bDYuNDYtOS40OGMuNDEtLjU1LDEuMS0uODIsMS42NS0uNjkuNjkuMTQsMS4xLjY5LDEuMjQsMS4zN2wzLjk5LDIyLjEzLDIuNzUsMTUuNTNjMCwuNTUsMCwuOTYtLjQxLDEuMzctLjI3LjQxLS44Mi41NS0xLjI0LjU1bC0xNy40NS0uOTYtMTkuNjUtMS4xYy0uNjksMC0xLjI0LS40MS0xLjUxLTEuMS0uMjctLjU1LDAtMS4zNy40MS0xLjc5bDguMTEtNy43Yy01LjA4LTMuMy0xMC45OS01LjUtMTcuMTgtNi4zMi0xLjkyLDAtMy44NS0uMjctNS45MS0uMTQtMjMuMzYuMjctNDIuMDUsMTkuMzgtNDEuOTEsNDIuNzQuMjcsMjMuMzYsMTkuMzgsNDIuMDUsNDIuNzQsNDEuOTEsMjMuMzYtLjI3LDQyLjA1LTE5LjM4LDQxLjkxLTQyLjc0LDAtMi4wNi0uMjctMy45OS0uNTUtNi4wNWwyMi41NC04LjUyYy45Niw0LjQsMS41MSw5LjA3LDEuNjUsMTMuODguNDEsMzYuNDItMjguODYsNjYuMjQtNjUuMjgsNjYuNTEtMzYuNDIuNDEtNjYuMjQtMjguODYtNjYuNTEtNjUuMjgtLjI3LTI3LjA3LDE1Ljk0LTUwLjU3LDM5LjE3LTYwLjg4Ii8+CiAgICAgIDxwYXRoIGNsYXNzPSJjbHMtNCIgZD0iTTEzOS42OSwxNTYuNzVjMy44NSwwLDYuODctMy4wMiw2Ljg3LTYuODdzLTMuMDItNi44Ny02Ljg3LTYuODctNi44NywzLjAyLTYuODcsNi44NywzLjAyLDYuODcsNi44Nyw2Ljg3WiIvPgogICAgPC9nPgogIDwvZz4KPC9zdmc+';
+BIN_IMGS.brown.src  = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iTGF5ZXJfMiIgZGF0YS1uYW1lPSJMYXllciAyIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjguOTcgMTY2LjM5Ij4KICA8ZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmNscy0xIHsKICAgICAgICBmaWxsOiAjNzc1MzI0OwogICAgICB9CgogICAgICAuY2xzLTIgewogICAgICAgIGZpbGw6ICNmZmY7CiAgICAgIH0KCiAgICAgIC5jbHMtMyB7CiAgICAgICAgZmlsbDogI2FhN2MzYTsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPGcgaWQ9ImNhc3RhbmhvIj4KICAgIDxnPgogICAgICA8cGF0aCBjbGFzcz0iY2xzLTMiIGQ9Ik0xNTYuNDksNi4yN2wtMTEuMjEsMTUxLjI3Yy0uMjcsNC45Ny00LjE1LDguODUtOC44NSw4Ljg1SDMxLjAyYy00LjY5LDAtOC41Ny0zLjg4LTguODUtOC44NUwxMC45Nyw2LjI3aDE0NS41MloiLz4KICAgICAgPHJlY3QgY2xhc3M9ImNscy0zIiB3aWR0aD0iMTY4Ljk3IiBoZWlnaHQ9IjExLjIxIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNjguOTcgMTEuMjEpIHJvdGF0ZSgxODApIi8+CiAgICAgIDxwb2x5Z29uIGNsYXNzPSJjbHMtMSIgcG9pbnRzPSIwIDExLjIxIDE2OC45NyAxMS4yMSAxNTUuMzcgMTkuNjIgMTIuMDggMTkuNjIgMCAxMS4yMSIvPgogICAgPC9nPgogIDwvZz4KICA8ZyBpZD0idmVyZGUiPgogICAgPGc+CiAgICAgIDxwYXRoIGNsYXNzPSJjbHMtMiIgZD0iTTcyLjcxLDkyLjQzYy0uNjUsMS4zOC0xLjAyLDIuODQtMS4wMiw0LjQ0djIuMThoNi4xMXYtMi4xOGMwLTEuNi41MS0yLjkxLDEuNDUtMy45M3MyLjMzLTEuNDUsNC0xLjQ1LDMuMDYuNTEsNCwxLjQ1Yy45NSwxLjAyLDEuNDUsMi4zMywxLjQ1LDMuOTN2Mi4xOGg2LjExdi0yLjE4YzAtMS41My0uMzYtMy4wNi0xLjAyLTQuNDQtLjY1LTEuMzgtMS42LTIuNjItMi44NC0zLjY0LDEuMjQtMS4wMiwyLjExLTIuMTgsMi44NC0zLjU2LjY1LTEuMzgsMS4wMi0yLjg0LDEuMDItNC40NHYtMi4xOGgtNi4xMXYyLjE4YzAsMS42LS41MSwyLjkxLTEuNDUsMy45My0uOTUsMS4wMi0yLjMzLDEuNDUtNCwxLjQ1cy0zLjA2LS41MS00LTEuNDVjLS45NS0xLjAyLTEuNDUtMi4zMy0xLjQ1LTMuOTN2LTIuMThoLTYuMTF2Mi4xOGMwLDEuNi4zNiwzLjA2LDEuMDIsNC40NC42NSwxLjM4LDEuNiwyLjU1LDIuODQsMy41Ni0xLjI0LDEuMDItMi4xMSwyLjE4LTIuODQsMy42NFoiLz4KICAgICAgPHBhdGggY2xhc3M9ImNscy0yIiBkPSJNNjguNzEsNTQuMTZzLjA3LDAsLjE1LS4wN2M0LjE1LTEuODIsOC44LTIuODQsMTMuNi0yLjkxaDIuMjZjLjUxLDAsMS4wMi4wNywxLjYuMTVoLjIyYzYuMTEuNjUsMTEuNzgsMi45MSwxNi41MSw2LjMzbDMuNDItNS4wMmMuMjItLjI5LjU4LS40NC44Ny0uMzYuMzYuMDcuNTguMzYuNjUuNzNsMi4xMSwxMS43MSwxLjQ1LDguMjJjMCwuMjksMCwuNTEtLjIyLjczLS4xNS4yMi0uNDQuMjktLjY1LjI5bC05LjI0LS41MS0xMC40LS41OGMtLjM2LDAtLjY1LS4yMi0uOC0uNTgtLjE1LS4yOSwwLS43My4yMi0uOTVsNC4yOS00LjA3Yy0yLjY5LTEuNzUtNS44Mi0yLjkxLTkuMDktMy4zNS0xLjAyLDAtMi4wNC0uMTUtMy4xMy0uMDctMTIuMzcuMTUtMjIuMjYsMTAuMjYtMjIuMTksMjIuNjIuMTUsMTIuMzcsMTAuMjYsMjIuMjYsMjIuNjIsMjIuMTksMTIuMzctLjE1LDIyLjI2LTEwLjI2LDIyLjE5LTIyLjYyLDAtMS4wOS0uMTUtMi4xMS0uMjktMy4ybDExLjkzLTQuNTFjLjUxLDIuMzMuOCw0LjguODcsNy4zNS4yMiwxOS4yOC0xNS4yOCwzNS4wNi0zNC41NSwzNS4yMS0xOS4yOC4yMi0zNS4wNi0xNS4yOC0zNS4yMS0zNC41NS0uMTUtMTQuMzMsOC40NC0yNi43NywyMC43My0zMi4yMyIvPgogICAgICA8cGF0aCBjbGFzcz0iY2xzLTIiIGQ9Ik04My4zMyw4MC4wNmMyLjA0LDAsMy42NC0xLjYsMy42NC0zLjY0cy0xLjYtMy42NC0zLjY0LTMuNjQtMy42NCwxLjYtMy42NCwzLjY0LDEuNiwzLjY0LDMuNjQsMy42NFoiLz4KICAgIDwvZz4KICA8L2c+Cjwvc3ZnPg==';
+
+
+const ITEMS=[
+  {id:'paper',    emoji:'📄',label:'Papel',           bin:'blue',  w:28},
+  {id:'cardboard',emoji:'📦',label:'Cartão',          bin:'blue',  w:22},
+  {id:'newspaper',emoji:'📰',label:'Jornal',          bin:'blue',  w:20},
+  {id:'envelope', emoji:'✉️', label:'Envelope',        bin:'blue',  w:15},
+  {id:'book',     emoji:'📚',label:'Revista',         bin:'blue',  w:12},
+  {id:'plastic',  emoji:'🧴',label:'Plástico',        bin:'yellow',w:26},
+  {id:'can',      emoji:'🥫',label:'Lata',            bin:'yellow',w:22},
+  {id:'bag',      emoji:'🛍️',label:'Embalagem',       bin:'yellow',w:18},
+  {id:'cup',      emoji:'🥤',label:'Copo Plástico',   bin:'yellow',w:16},
+  {id:'bottle2',  emoji:'🍶',label:'Garrafa Plástico',bin:'yellow',w:13},
+  {id:'foil',     emoji:'🪣',label:'Emb. Metal',      bin:'yellow',w:11},
+  {id:'bottle',   emoji:'🍾',label:'Garrafa Vidro',   bin:'green', w:26},
+  {id:'jar',      emoji:'🫙',label:'Frasco',          bin:'green', w:22},
+  {id:'glass',    emoji:'🥃',label:'Copo Vidro',      bin:'green', w:18},
+  {id:'wineglass',emoji:'🍷',label:'Copo Vinho',      bin:'green', w:14},
+  {id:'beerbot',  emoji:'🍺',label:'Garrafa Cerveja', bin:'green', w:12},
+  {id:'veggie',   emoji:'🥦',label:'Legumes',         bin:'brown', w:26},
+  {id:'fruit',    emoji:'🍌',label:'Fruta',           bin:'brown', w:22},
+  {id:'apple',    emoji:'🍎',label:'Maçã',            bin:'brown', w:18},
+  {id:'leaves',   emoji:'🍃',label:'Folhas',          bin:'brown', w:15},
+  {id:'bread',    emoji:'🍞',label:'Pão',             bin:'brown', w:13},
+  {id:'eggshell', emoji:'🥚',label:'Casca Ovo',       bin:'brown', w:11},
+];
+
+// ════ BADGES ════
+// Each badge: id, icon, name, desc, condition(stats,S)=>bool
+const ALL_BADGES=[
+  // Score based
+  {id:'centurion',    icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>', name:'Centurião',       desc:'Chegaste aos 100 pontos!',           cond:(s,G)=>G.score>=100},
+  {id:'mestre',       icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5c-3.3 0-6 2.7-6 6 0 2 1 3.8 2.5 4.9V18h7v-2.1C17 14.8 18 13 18 11c0-3.3-2.7-6-6-6z"/><line x1="10" y1="18" x2="14" y2="18"/><line x1="10" y1="21" x2="14" y2="21"/></svg>', name:'Mestre Reciclador',desc:'Chegaste aos 500 pontos!',          cond:(s,G)=>G.score>=500},
+  {id:'lenda',        icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>', name:'Lenda Verde',      desc:'Chegaste aos 1000 pontos!',         cond:(s,G)=>G.score>=1000},
+  {id:'insano',       icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2C8 2 4 8 4 14l4 4c0 0 1-4 4-4s4 4 4 4l4-4c0-6-4-12-8-12z"/><line x1="12" y1="10" x2="12" y2="10" stroke-width="3"/></svg>', name:'Fora de Série',    desc:'Chegaste aos 2000 pontos!',         cond:(s,G)=>G.score>=2000},
+  // Accuracy
+  {id:'perfeito',     icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>', name:'Olho de Águia',   desc:'Apanhaste tudo certo! Incrível!',cond:(s,G)=>G.totalC+G.totalW>=10&&G.totalW===0},
+  {id:'fiavel',       icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>', name:'Fiável',           desc:'Erraste muito pouco. Bom trabalho!',        cond:(s,G)=>{const t=G.totalC+G.totalW;return t>=10&&G.totalC/t>=.8;}},
+  // Combo
+  {id:'embalagem',    icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2c0 0-5 5-5 11a5 5 0 0 0 10 0c0-4-2-6-2-6s-1 3-2 3c0-3 1-8-1-8z"/></svg>', name:'Em Chamas',        desc:'Ativaste o combo x2!',            cond:(s,G)=>G.maxCombo>=5},
+  {id:'meteoro',      icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="15" cy="9" r="4"/><line x1="2" y1="22" x2="11" y2="13"/></svg>', name:'Meteoro',          desc:'Ativaste o combo x3!',            cond:(s,G)=>G.maxCombo>=10},
+  {id:'imparavel',    icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>', name:'Imparável',        desc:'Ativaste o combo x5!',            cond:(s,G)=>G.maxCombo>=20},
+  // Per bin
+  {id:'cartao',       icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8l-9-5-9 5v8l9 5 9-5z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>', name:'Rei do Cartão',    desc:'Apanhaste 15 itens azuis!',         cond:(s,G)=>s.blue.c>=15},
+  {id:'plastico_rei', icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="8" y="6" width="8" height="14" rx="2"/><path d="M10 6V4h4v2"/></svg>', name:'Rei do Plástico',  desc:'Apanhaste 15 itens amarelos!',      cond:(s,G)=>s.yellow.c>=15},
+  {id:'vidro_rei',    icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 3h4v4l2 3v8a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2v-8l2-3V3z"/></svg>', name:'Rei do Vidro',     desc:'Apanhaste 15 itens verdes!',        cond:(s,G)=>s.green.c>=15},
+  {id:'bio_rei',      icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><circle cx="15" cy="8" r="3"/><circle cx="12" cy="5" r="3"/><line x1="12" y1="11" x2="12" y2="21"/></svg>', name:'Rei do Composto',  desc:'Apanhaste 15 biorresíduos!',        cond:(s,G)=>s.brown.c>=15},
+  {id:'4bins',        icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 15s0-8 8-8 8 8 8 8"/><path d="M6 15s0-5 6-5 6 5 6 5"/></svg>', name:'Eco Completo',     desc:'Apanhaste de todos os ecopontos!',cond:(s,G)=>s.blue.c>0&&s.yellow.c>0&&s.green.c>0&&s.brown.c>0},
+  // Lives
+  {id:'blindado',     icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>', name:'Blindado',         desc:'Terminaste sem perder nenhuma vida!',           cond:(s,G)=>G.lives===3},
+  {id:'resistente',   icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>', name:'Resistente',       desc:'Apanhaste uma vida extra!',         cond:(s,G)=>G.extraLivesCollected>0},
+  // Level
+  {id:'escalada',     icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>', name:'Em Ascensão',      desc:'Chegaste ao nível 5!',              cond:(s,G)=>G.maxLevel>=5},
+  {id:'elite',        icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 21h8m-4-4v4M5 3H3v5a4 4 0 0 0 4 4h10a4 4 0 0 0 4-4V3h-2"/><path d="M5 3h14v6a7 7 0 0 1-7 7 7 7 0 0 1-7-7V3z"/></svg>', name:'Elite Verde',      desc:'Chegaste ao nível 10!',             cond:(s,G)=>G.maxLevel>=10},
+  // Fun
+  {id:'torpedo',      icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', name:'Torpedo',          desc:'Apanhaste 5 itens em 10 segundos!', cond:(s,G)=>G.fastCatch>=5},
+  {id:'ecoponto',     icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 19H4.5a2.5 2.5 0 0 1 0-5H17"/><path d="M17 5h2.5a2.5 2.5 0 0 1 0 5H7"/><polyline points="14 2 17 5 14 8"/><polyline points="10 22 7 19 10 16"/></svg>', name:'Guardião do Planeta',desc:'Apanhaste 50 itens certinhos!',  cond:(s,G)=>G.totalC>=50},
+  {id:'campeao',      icon:'<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="14" r="7"/><path d="M9 3l3 3 3-3"/><line x1="12" y1="6" x2="12" y2="7"/></svg>', name:'Campeão AMTRES',   desc:'Bateste o teu próprio recorde!', cond:(s,G)=>G.newRecord},
+];
+
+const WRONG_MSGS_MAP={
+  blue:  ['📄 Vai para o Azul!','📦 É papel — Ecoponto Azul','📰 Jornal → Azul'],
+  yellow:['🧴 Vai para o Amarelo!','🥫 Lata → Ecoponto Amarelo','🛍️ Embalagens → Amarelo'],
+  green: ['🍾 Vai para o Verde!','🫙 Vidro → Ecoponto Verde','🥃 Copo vidro → Verde'],
+  brown: ['🥦 Vai para o Castanho!','🍌 Fruta → Orgânicos','🍎 Biorresíduo → Castanho'],
+};
+const MISSED_MSGS=['Deixaste escapar! −2','Não deixas passar!','Atenção ao caixote!','Perdeste pontos!'];
+
+// ════ SCREENS ════
+const $=id=>document.getElementById(id);
+function showScreen(n){
+  ['start','game','gameover'].forEach(k=>screens[k].classList.toggle('hidden',k!==n));
+  // disable canvas when not in game so it never blocks other screens
+  canvas.style.pointerEvents=(n==='game')?'auto':'none';
+}
+const screens={start:$('start-screen'),game:$('game-screen'),gameover:$('gameover-screen')};
+
+// ════ CANVAS ════
+const canvas=$('gameCanvas'),ctx=canvas.getContext('2d');
+function resize(){canvas.width=canvas.offsetWidth*devicePixelRatio;canvas.height=canvas.offsetHeight*devicePixelRatio;}
+window.addEventListener('resize',resize);
+
+// ════ STATE ════
+const BIN_DUR=15,COMBO_MAX_DISPLAY=5;
+let S={},animId=null,lastTs=0,lastTickSec=-1;
+
+function initState(){
+  const bin=BINS[Math.floor(Math.random()*BINS.length)];
+  const stats={};BINS.forEach(b=>stats[b.id]={c:0,w:0,missed:0});
+  S={
+    bin:{x:.5,w:110,h:58},
+    curBin:bin,binTimer:BIN_DUR,flashing:false,
+    items:[],score:0,lives:3,level:1,
+    spawnT:0,spawnI:105,baseSpd:2.7,
+    paused:false,running:false,
+    keys:{l:false,r:false},mouseX:null,touchX:null,
+    particles:[],pops:[],
+    stats,totalC:0,totalW:0,
+    // combo
+    combo:0,maxCombo:0,multiplier:1,
+    // extras
+    extraLivesCollected:0,
+    binDur:15,
+    maxLevel:1,
+    fastCatch:0,fastCatchTimer:0,
+    newRecord:false,
+  };
+  lastTickSec=-1;
+  buildComboDots();
+}
+
+// ════ CONTROLS ════
+document.addEventListener('keydown',e=>{
+  if(!S.running)return;
+  if(e.key==='ArrowLeft')  S.keys.l=true;
+  if(e.key==='ArrowRight') S.keys.r=true;
+  if(e.key==='Escape'||e.key==='p')togglePause();
+});
+document.addEventListener('keyup',e=>{
+  if(e.key==='ArrowLeft')  S.keys.l=false;
+  if(e.key==='ArrowRight') S.keys.r=false;
+});
+canvas.addEventListener('mousemove',e=>{
+  const r=canvas.getBoundingClientRect();S.mouseX=(e.clientX-r.left)/r.width;
+});
+canvas.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  const r=canvas.getBoundingClientRect();S.touchX=(e.touches[0].clientX-r.left)/r.width;
+  if(S.paused)togglePause();
+},{passive:false});
+canvas.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  const r=canvas.getBoundingClientRect();S.touchX=(e.touches[0].clientX-r.left)/r.width;
+},{passive:false});
+canvas.addEventListener('touchend',()=>{S.touchX=null;});
+$('btn-pause').addEventListener('click',function(e){e.stopPropagation();togglePause();});
+$('btn-resume').addEventListener('click',function(e){e.stopPropagation();togglePause();});
+$('btn-pause-restart').addEventListener('click',function(e){
+  e.stopPropagation();
+  if(animId)cancelAnimationFrame(animId);
+  S.running=false;S.paused=false;
+  canvas.style.pointerEvents='auto';
+  $('pause-overlay').classList.remove('show');
+  startGame();
+});
+$('btn-pause-menu').addEventListener('click',function(e){
+  e.stopPropagation();
+  if(animId)cancelAnimationFrame(animId);
+  S.running=false;S.paused=false;
+  canvas.style.pointerEvents='auto';
+  
+  $('pause-overlay').classList.remove('show');
+  showScreen('start');
+});
+
+function togglePause(){
+  if(!S.running)return;
+  S.paused=!S.paused;
+  $('pause-overlay').classList.toggle('show',S.paused);
+  // disable canvas when paused so buttons are clickable
+  canvas.style.pointerEvents=S.paused?'none':'auto';
+  if(!S.paused){lastTs=0;requestAnimationFrame(loop);}
+}
+
+// ════ COMBO ════
+function buildComboDots(){
+  const el=$('combo-dots');el.innerHTML='';
+  for(let i=0;i<COMBO_MAX_DISPLAY;i++){
+    const d=document.createElement('div');d.className='combo-dot';el.appendChild(d);
+  }
+}
+function updateComboHUD(){
+  const hud=$('combo-hud');
+  const dots=$('combo-dots').children;
+  const displayCombo=Math.min(S.combo,COMBO_MAX_DISPLAY);
+  for(let i=0;i<COMBO_MAX_DISPLAY;i++)
+    dots[i].classList.toggle('lit',i<displayCombo);
+  const multi=S.multiplier;
+  $('combo-label').textContent=multi>1?`x${multi}`:`${S.combo}/5`;
+  hud.classList.toggle('show',S.combo>0);
+}
+
+function onComboIncrease(){
+  S.combo++;
+  if(S.combo>S.maxCombo)S.maxCombo=S.combo;
+  // multiplier thresholds: 5=x2, 10=x3, 15=x4, 20=x5
+  const newMulti=S.combo>=20?5:S.combo>=15?4:S.combo>=10?3:S.combo>=5?2:1;
+  if(newMulti>S.multiplier){
+    S.multiplier=newMulti;
+    flashMultiplier(`x${newMulti}`,newMulti);
+    
+  }
+}
+function onComboBreak(){
+  S.combo=0;S.multiplier=1;
+}
+let multiTimer=null;
+function flashMultiplier(txt,multi){
+  const el=$('multi-flash');el.textContent=txt;
+  el.classList.add('pop');
+  snd('combo',multi);
+  clearTimeout(multiTimer);
+  multiTimer=setTimeout(()=>el.classList.remove('pop'),700);
+}
+
+// ════ EXTRA LIFE ITEM ════
+let extraLifeTimer=0;
+let bombTimer=0;
+let goldTimer=0;
+let bossRoundActive=false;
+let bossRoundTimer=0;
+let binJump=0; // for bin bounce animation
+const BOSS_ROUND_INTERVAL=30; // every 30 seconds
+const BOSS_ROUND_DURATION=10;
+const EXTRA_LIFE_INTERVAL=25; // seconds between spawns
+function maybeSpawnExtraLife(dt){
+  extraLifeTimer+=dt;
+  if(extraLifeTimer>=EXTRA_LIFE_INTERVAL){
+    extraLifeTimer=0;
+    const W=canvas.offsetWidth;
+    S.items.push({
+      id:'extralife',emoji:'🆘',label:'Vida Extra',bin:'__special__',
+      x:28+Math.random()*(W-56),y:-54,size:50,
+      speed:(S.baseSpd*.7),special:true,
+      // pulsing effect
+      pulse:0,
+    });
+  }
+}
+
+// ════ DIFFICULTY CURVE ════
+function getDiff(lvl){
+  // wrongChance: probability of spawning a wrong item
+  // binDur: seconds before bin changes
+  // maxSimul: max extra items spawned per tick
+  if(lvl<=3) return {wrongChance:.40, binDur:15, maxSimul:1};
+  if(lvl<=6) return {wrongChance:.50, binDur:13, maxSimul:2};
+  if(lvl<=9) return {wrongChance:.60, binDur:11, maxSimul:3};
+  return            {wrongChance:.70, binDur: 9, maxSimul:4};
+}
+
+// ════ SPAWN ════
+function wpick(pool){
+  const t=pool.reduce((s,i)=>s+i.w,0);let r=Math.random()*t;
+  for(const i of pool){r-=i.w;if(r<=0)return i;}return pool[0];
+}
+function spawnItem(){
+  const W=canvas.offsetWidth;
+  const diff=getDiff(S.level);
+  const correct=ITEMS.filter(i=>i.bin===S.curBin.id);
+  const wrong=ITEMS.filter(i=>i.bin!==S.curBin.id);
+  const pool=Math.random()<diff.wrongChance?wrong:correct;
+  const def=wpick(pool.length?pool:correct);
+  S.items.push({...def,x:28+Math.random()*(W-56),y:-54,size:46,speed:S.baseSpd+Math.random()*1.7,special:false,scale:0,popping:true});
+}
+
+// ════ PARTICLES & POPS ════
+function addParticles(x,y,color,n=8){
+  for(let i=0;i<n;i++){
+    const a=(Math.PI*2/n)*i+Math.random()*.5;
+    S.particles.push({x,y,vx:Math.cos(a)*(2+Math.random()*3.5),vy:Math.sin(a)*(2+Math.random()*3.5),alpha:1,color,sz:3+Math.random()*4,life:42});
+  }
+}
+function addPop(x,y,txt,ok){S.pops.push({x,y,txt,alpha:1,vy:-2.4,ok,life:52});}
+
+// ════ TOASTS ════
+let TT={};
+function toast(id,msg,cls,dur=1700){
+  const el=$(id);el.textContent=msg;el.className=cls+' show';
+  clearTimeout(TT[id]);TT[id]=setTimeout(()=>el.className=cls,dur);
+}
+function showWrongFeedback(item){
+  const hints=WRONG_MSGS_MAP[item.bin]||[];
+  $('wf-main').textContent='❌ '+item.label+' não vai para aqui!';
+  $('wf-hint').textContent=hints[Math.floor(Math.random()*hints.length)]||'';
+  $('wrong-feedback').classList.add('show');
+  clearTimeout(TT.wf);TT.wf=setTimeout(()=>$('wrong-feedback').classList.remove('show'),2000);
+}
+
+// ════ LEVEL ════
+let levelBT=null;
+function showBossAlert(){
+  const el=$('level-badge');
+  el.style.background='rgba(220,38,38,.9)';el.style.color='#fff';
+  el.textContent='⚡ BOSS ROUND — CAIXOTE LOUCO!';
+  el.classList.add('show');
+  clearTimeout(levelBT);
+  levelBT=setTimeout(()=>{
+    el.classList.remove('show');
+    // end boss after BOSS_ROUND_DURATION
+    setTimeout(()=>{
+      bossRoundActive=false;bossRoundTimer=0;
+      el.style.background='';el.style.color='';
+      el.textContent='✅ BOSS TERMINADO!';el.classList.add('show');
+      setTimeout(()=>el.classList.remove('show'),1800);
+    }, BOSS_ROUND_DURATION*1000);
+  },2500);
+}
+function showLevelBadge(lvl){
+  const el=$('level-badge');
+  const diff=getDiff(lvl);
+  const msgs=['','','Mais rápido!','Mais erros!','Caixote muda mais depressa!','Ainda mais erros!','Caos total!','Nível extremo!','Imparável!','Lenda!','Fora de Série!'];
+  const msg=msgs[lvl]||(lvl>10?'Modo Impossível!':'Atenção!');
+  el.textContent=`⬆️ NÍVEL ${lvl} — ${msg.toUpperCase()} (caixote ${diff.binDur}s)`;
+  el.classList.add('show');clearTimeout(levelBT);levelBT=setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+// ════ BIN CHANGE ════
+function triggerBinChange(){
+  const others=BINS.filter(b=>b.id!==S.curBin.id);
+  S.curBin=others[Math.floor(Math.random()*others.length)];
+  S.binTimer=S.binDur;lastTickSec=-1;
+  $('timer-bar').classList.remove('pulse');$('countdown-badge').classList.remove('show');
+  snd('change');
+  $('score-val').style.color=S.curBin.colorLight;
+  $('timer-bar').style.background=S.curBin.color;
+}
+
+// ════ HUD ════
+function updateHUD(){
+  $('score-val').textContent=S.score;
+  $('level-val').textContent=S.level;
+  document.querySelectorAll('.life-dot').forEach((d,i)=>d.classList.toggle('lost',i>=S.lives));
+  const pct=(S.binTimer/BIN_DUR)*100;
+  $('timer-bar').style.width=pct+'%';
+  const sLeft=Math.ceil(S.binTimer);
+  if(S.binTimer<=3){
+    $('timer-bar').classList.add('pulse');$('countdown-badge').classList.add('show');
+    if(sLeft!==lastTickSec){lastTickSec=sLeft;}
+  }else{
+    $('timer-bar').classList.remove('pulse');$('countdown-badge').classList.remove('show');
+  }
+  updateComboHUD();
+}
+
+// ════ DRAW ════
+function rr(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+}
+function drawBg(){
+  const W=canvas.offsetWidth,H=canvas.offsetHeight;
+  ctx.fillStyle='#F5F2EC';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(0,88,61,.06)';ctx.lineWidth=1;
+  for(let i=1;i<5;i++){ctx.beginPath();ctx.moveTo(W/5*i,0);ctx.lineTo(W/5*i,H);ctx.stroke();}
+
+}
+// aspect ratios per bin (w/h from viewBox)
+const BIN_RATIOS={blue:286.4/341.89,yellow:286.4/341.89,green:286.4/341.89,brown:168.97/166.39};
+
+function drawBin(){
+  const W=canvas.offsetWidth,H=canvas.offsetHeight;
+  const binW=120;
+  const ratio=BIN_RATIOS[S.curBin.id]||0.84;
+  const binH=Math.round(binW/ratio);
+  // bin bounce animation
+  if(binJump>0){binJump=Math.max(0,binJump-1.8);}
+  const jumpY=Math.sin(binJump/12*Math.PI)*10;
+  const bx=S.bin.x*W-binW/2,by=H-binH-4-jumpY;
+  const binImg=BIN_IMGS[S.curBin.id];
+  ctx.save();
+  ctx.shadowColor=S.curBin.glow;ctx.shadowBlur=S.multiplier>1?28:16;
+  ctx.drawImage(binImg,bx,by,binW,binH);
+  ctx.restore();
+  if(S.multiplier>1){
+    ctx.font="bold 13px 'Outfit',sans-serif";
+    ctx.fillStyle=S.curBin.color;
+    ctx.textAlign='center';ctx.textBaseline='bottom';
+    ctx.fillText('x'+S.multiplier,S.bin.x*W,by-4);
+  }
+}
+function drawItems(){
+  S.items.forEach(item=>{
+    ctx.save();
+    ctx.shadowBlur=0;ctx.shadowColor='transparent';
+    if(item.special){
+      item.pulse=(item.pulse||0)+.08;
+      const sc=1+Math.sin(item.pulse)*.12;
+      ctx.translate(item.x,item.y);ctx.scale(sc,sc);
+      ctx.shadowColor='#3a7d1e';ctx.shadowBlur=14;
+      ctx.font=`${item.size}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(item.emoji,0,0);
+    }else{
+      if(item.popping){
+        item.scale=Math.min(1,(item.scale||0)+.18);
+        if(item.scale>=1)item.popping=false;
+      }else{item.scale=1;}
+      // gold pulse
+      if(item.isGold){item._gp=(item._gp||0)+.12;item.scale=1+Math.sin(item._gp)*.08;}
+      ctx.translate(item.x,item.y);ctx.scale(item.scale,item.scale);
+      if(item.isGold){ctx.shadowColor='#F59E0B';ctx.shadowBlur=18;}
+      else if(item.isBomb){ctx.shadowColor='#EF4444';ctx.shadowBlur=12;}
+      else{ctx.shadowColor='rgba(0,0,0,0.18)';ctx.shadowBlur=6;ctx.shadowOffsetY=2;}
+      ctx.font=`${item.size*.9}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(item.emoji,0,0);
+    }
+    ctx.restore();
+  });
+}
+function drawParticles(){
+  S.particles.forEach(p=>{
+    ctx.save();ctx.globalAlpha=p.alpha;ctx.fillStyle=p.color;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);ctx.fill();ctx.restore();
+  });
+}
+function drawPops(){
+  S.pops.forEach(p=>{
+    ctx.save();ctx.globalAlpha=p.alpha;
+    ctx.font="bold 18px 'Outfit',sans-serif";
+    ctx.fillStyle=p.ok?'#22C55E':'#EF4444';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(p.txt,p.x,p.y);ctx.restore();
+  });
+}
+
+// ════ UPDATE ════
+function update(dt){
+  const W=canvas.offsetWidth,H=canvas.offsetHeight;
+  S.binTimer-=dt;
+  if(S.binTimer<=0){triggerBinChange();return;}
+
+  // fast catch timer
+  S.fastCatchTimer+=dt;
+  if(S.fastCatchTimer>10){S.fastCatch=0;S.fastCatchTimer=0;}
+
+  // extra life spawn
+  maybeSpawnExtraLife(dt);
+  // bomb spawn (every 20-30s, more frequent at higher levels)
+  bombTimer+=dt;
+  const bombInterval=Math.max(15,22-S.level*1.5);
+  if(bombTimer>=bombInterval){
+    bombTimer=0;
+    const W2=canvas.offsetWidth;
+    S.items.push({id:'bomb',emoji:'💣',label:'Bomba',bin:'__bomb__',
+      x:28+Math.random()*(W2-56),y:-54,size:44,speed:(S.baseSpd+1.2),special:false,
+      scale:0,popping:true,isBomb:true});
+  }
+  // golden item (every 18s)
+  goldTimer+=dt;
+  if(goldTimer>=18){
+    goldTimer=0;
+    const W3=canvas.offsetWidth;
+    const correct=ITEMS.filter(i=>i.bin===S.curBin.id);
+    const def={...correct[Math.floor(Math.random()*correct.length)]};
+    S.items.push({...def,x:28+Math.random()*(W3-56),y:-54,size:48,
+      speed:(S.baseSpd*.8),special:false,scale:0,popping:true,isGold:true});
+  }
+  // boss round
+  bossRoundTimer+=dt;
+  if(!bossRoundActive&&bossRoundTimer>=BOSS_ROUND_INTERVAL){
+    bossRoundActive=true;bossRoundTimer=0;
+    showBossAlert();
+  }
+  if(bossRoundActive){
+    bossRoundTimer+=0; // tracked above
+    S.binDur=4; // super fast during boss
+  } else {
+    S.binDur=getDiff(S.level).binDur;
+  }
+
+  // move bin
+  if(S.keys.l)S.bin.x-=8/W;
+  if(S.keys.r)S.bin.x+=8/W;
+  if(S.mouseX!==null)S.bin.x=S.mouseX;
+  if(S.touchX!==null)S.bin.x=S.touchX;
+  S.bin.x=Math.max(S.bin.w/2/W,Math.min(1-S.bin.w/2/W,S.bin.x));
+
+  // spawn
+  S.spawnT++;
+  if(S.spawnT>=S.spawnI){
+    S.spawnT=0;
+    const diff=getDiff(S.level);
+    spawnItem();
+    const extras=Math.floor(Math.random()*(diff.maxSimul+1));
+    for(let i=0;i<extras;i++)spawnItem();
+  }
+
+  // level up
+  const nl=1+Math.floor(S.score/250);
+  if(nl>S.level){
+    S.level=nl;if(nl>S.maxLevel)S.maxLevel=nl;
+    S.baseSpd=2.7+(nl-1)*.3;
+    S.spawnI=Math.max(50,105-(nl-1)*7);
+    S.binDur=getDiff(nl).binDur;
+    showLevelBadge(nl);
+  }
+
+  // collision
+  const binRatio=BIN_RATIOS[S.curBin.id]||0.84;
+  const _bH=Math.round(120/binRatio);
+  const bl=S.bin.x*W-50,br=S.bin.x*W+50;
+  const bt=H-_bH-4,bb=H-8;
+
+  S.items=S.items.filter(item=>{
+    item.y+=item.speed;
+    const caught=item.y+item.size/2>=bt&&item.y-item.size/2<=bb&&item.x>=bl-8&&item.x<=br+8;
+
+    if(caught){
+      // BOMB — lose life immediately
+      if(item.isBomb){
+        S.lives--;
+        addParticles(item.x,item.y,'#EF4444',18);
+        addPop(item.x,item.y-24,'💥 BOMBA!',false);
+        snd('wrong');
+        if(navigator.vibrate)navigator.vibrate([100,50,100]);
+        canvas.style.transform='translateX(-10px)';
+        setTimeout(()=>canvas.style.transform='translateX(10px)',60);
+        setTimeout(()=>canvas.style.transform='',130);
+        if(S.lives<=0){endGame();return false;}
+        updateHUD();return false;
+      }
+      // GOLDEN ITEM — double points
+      if(item.isGold){
+        const base=(10+(S.level-1)*5)*2;
+        const pts=base*S.multiplier;
+        S.score+=pts;S.totalC++;S.stats[S.curBin.id].c++;
+        onComboIncrease();
+        addParticles(item.x,item.y,'#F59E0B',16);
+        addPop(item.x,item.y-24,'⭐ +'+pts+'!',true);
+        binJump=12;
+        updateHUD();return false;
+      }
+      // EXTRA LIFE
+      if(item.special){
+        if(S.lives<5)S.lives++;
+        S.extraLivesCollected++;
+        addParticles(item.x,item.y,'#22C55E',14);
+        addPop(item.x,item.y-24,'❤️ +1 VIDA',true);
+        $('life-toast').classList.add('show');
+        clearTimeout(TT.lt);TT.lt=setTimeout(()=>$('life-toast').classList.remove('show'),1800);
+        
+        updateHUD();return false;
+      }
+      const ok=item.bin===S.curBin.id;
+      if(ok){
+        const base=10+(S.level-1)*5;
+        const pts=base*S.multiplier;
+        S.score+=pts;S.totalC++;S.stats[S.curBin.id].c++;
+        S.fastCatch++;
+        onComboIncrease();
+        addParticles(item.x,item.y,S.curBin.colorLight,10);
+        const popTxt=S.multiplier>1?`+${pts} x${S.multiplier}!`:'+'+pts;
+        addPop(item.x,item.y-22,popTxt,true);
+        binJump=8; // trigger bounce
+        
+      }else{
+        S.lives--;S.totalW++;S.stats[S.curBin.id].w++;
+        onComboBreak();
+        addParticles(item.x,item.y,'#EF4444',12);
+        addPop(item.x,item.y-22,'−5',false);
+        showWrongFeedback(item);snd('wrong');
+        if(navigator.vibrate)navigator.vibrate([60,30,60]);
+        canvas.style.transform='translateX(-7px)';
+        setTimeout(()=>canvas.style.transform='translateX(7px)',60);
+        setTimeout(()=>canvas.style.transform='',125);
+        if(S.lives<=0){endGame();return false;}
+      }
+      updateHUD();return false;
+    }
+
+    // missed
+    if(item.y>H+55){
+      if(!item.special&&item.bin===S.curBin.id){
+        S.score=Math.max(0,S.score-2);
+        S.stats[S.curBin.id].missed++;
+        onComboBreak();
+        toast('missed-toast',MISSED_MSGS[Math.floor(Math.random()*MISSED_MSGS.length)],'',1400);
+        updateHUD();
+      }
+      return false;
+    }
+    return true;
+  });
+
+  S.particles=S.particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.13;p.alpha-=1/p.life;p.life--;return p.life>0;});
+  S.pops=S.pops.filter(p=>{p.y+=p.vy;p.alpha-=1/p.life;p.life--;return p.life>0;});
+}
+
+// ════ LOOP ════
+function loop(ts=0){
+  if(!S.running||S.paused)return;
+  const dt=lastTs?Math.min((ts-lastTs)/1000,.1):0;lastTs=ts;
+  resize();
+  ctx.save();ctx.scale(devicePixelRatio,devicePixelRatio);
+  drawBg();drawItems();drawParticles();drawBin();drawPops();
+  ctx.restore();
+  update(dt);updateHUD();
+  animId=requestAnimationFrame(loop);
+}
+
+// ════ RESULTS ════
+function buildResults(){
+  const tot=S.totalC+S.totalW;
+  const acc=tot>0?Math.round(S.totalC/tot*100):0;
+  const prevBest=parseInt(localStorage.getItem('tratolixo_best')||0);
+  const best=Math.max(S.score,prevBest);
+  S.newRecord=S.score>prevBest&&S.score>0;
+  localStorage.setItem('tratolixo_best',best);
+
+  $('go-score').textContent=S.score;
+  $('go-best').textContent=best;
+  $('go-acc').textContent=acc+'%';
+
+  if(S.newRecord){
+    $('record-score').textContent=S.score+' pts';
+    $('record-banner').classList.add('show');
+  }else{
+    $('record-banner').classList.remove('show');
+  }
+
+  // Badges
+  const earned=ALL_BADGES.filter(b=>b.cond(S.stats,S));
+  const prevEarned=JSON.parse(localStorage.getItem('tratolixo_badges')||'[]');
+  const newEarned=earned.filter(b=>!prevEarned.includes(b.id));
+  const allEarned=[...new Set([...prevEarned,...earned.map(b=>b.id)])];
+  localStorage.setItem('tratolixo_badges',JSON.stringify(allEarned));
+
+  const bg=$('badges-grid');bg.innerHTML='';
+  const btitle=$('badges-title');
+  if(earned.length>0){
+    btitle.style.display='block';
+    earned.forEach(b=>{
+      const isNew=newEarned.find(n=>n.id===b.id);
+      const card=document.createElement('div');
+      card.className='badge-card';
+      card.innerHTML=`
+        <div class="badge-icon" style="color:var(--brand-dark)">${b.icon}</div>
+        <div class="badge-name">${b.name}</div>
+        <div class="badge-desc">${b.desc}</div>
+        ${isNew?'<div class="badge-new">✨ Novo!</div>':''}
+      `;
+      bg.appendChild(card);
+    });
+  }else{
+    btitle.style.display='none';
+  }
+
+  // Bin stats
+  const c=$('bin-stats');c.innerHTML='';
+  BINS.forEach(b=>{
+    const s=S.stats[b.id];const tot2=s.c+s.w;
+    const pct=tot2>0?Math.round(s.c/tot2*100):0;
+
+    const row=document.createElement('div');row.className='bsr';
+    row.innerHTML=`
+      <div class="bsr-dot" style="background:${b.color}"></div>
+      <div class="bsr-name">${b.label}</div>
+      <div class="bsr-c">✓${s.c}</div>
+      <div class="bsr-w">✗${s.w}</div>
+      <div class="bsr-bar-wrap"><div class="bsr-bar" style="background:${b.color}" data-pct="${pct}"></div></div>
+    `;
+    c.appendChild(row);
+  });
+  setTimeout(()=>c.querySelectorAll('.bsr-bar').forEach(b=>b.style.width=b.dataset.pct+'%'),280);
+}
+
+function startCountdown(cb){
+  const overlay=$('countdown-overlay');
+  const num=$('countdown-num');
+  overlay.style.display='flex';
+  let count=3;
+  function tick(){
+    num.className='';
+    num.textContent=count;
+    void num.offsetWidth; // reflow
+    num.className='count-pop';
+    if(count===0){
+      num.textContent='VAI!';
+      num.style.color='var(--brand)';
+      setTimeout(()=>{
+        num.className='count-fade';
+        setTimeout(()=>{
+          overlay.style.display='none';
+          num.style.color='';
+          cb();
+        },250);
+      },500);
+      return;
+    }
+    count--;
+    setTimeout(tick,800);
+  }
+  tick();
+}
+
+function startGame(){
+  if(animId)cancelAnimationFrame(animId);
+  initState();resize();extraLifeTimer=0;
+  $('score-val').style.color=S.curBin.colorLight;
+  $('timer-bar').style.background=S.curBin.color;
+  $('timer-bar').style.width='100%';
+  $('bin-flash').classList.remove('show');
+  $('pause-overlay').classList.remove('show');
+  $('wrong-feedback').classList.remove('show');
+  $('life-toast').classList.remove('show');
+  $('multi-flash').classList.remove('pop');
+  showScreen('game');
+  startCountdown(()=>{
+    canvas.style.pointerEvents='auto';
+    S.running=true;
+    lastTs=0;animId=requestAnimationFrame(loop);
+  });
+}
+function endGame(){
+  S.running=false;cancelAnimationFrame(animId);
+  snd('gameover');
+  if(navigator.vibrate)navigator.vibrate([80,40,80,40,200]);
+  showGameOverAnim(()=>{
+    buildResults();showScreen('gameover');
+  });
+}
+
+function showGameOverAnim(cb){
+  const overlay=document.getElementById('go-anim-overlay');
+  const txt=document.getElementById('go-anim-txt');
+  overlay.style.opacity='0';overlay.style.display='flex';
+  txt.style.transform='scale(0.4)';txt.style.opacity='0';
+  // fade in overlay
+  requestAnimationFrame(()=>{
+    overlay.style.transition='opacity .35s ease';
+    overlay.style.opacity='1';
+    setTimeout(()=>{
+      txt.style.transition='transform .4s cubic-bezier(.175,.885,.32,1.275), opacity .3s ease';
+      txt.style.transform='scale(1)';txt.style.opacity='1';
+      setTimeout(()=>{
+        txt.style.transition='transform .3s ease, opacity .3s ease';
+        txt.style.transform='scale(1.08)';
+        setTimeout(()=>{
+          overlay.style.transition='opacity .4s ease';
+          overlay.style.opacity='0';
+          setTimeout(()=>{overlay.style.display='none';cb();},400);
+        },700);
+      },600);
+    },200);
+  });
+}
+
+$('btn-start').addEventListener('click',()=>{ac();startGame();});
+$('btn-restart').addEventListener('click',startGame);
+$('btn-menu').addEventListener('click',()=>{
+  if(animId)cancelAnimationFrame(animId);
+  S.running=false;
+  showScreen('start');
+});
+
+resize();showScreen('start');
+
+function toggleHow(){
+  const body=document.getElementById('how-body');
+  const chevron=document.getElementById('how-chevron');
+  const open=body.classList.toggle('open');
+  chevron.style.transform=open?'rotate(180deg)':'rotate(0deg)';
+}
+
+
+const BIN_INFO={
+  blue:  {txt:'Papel, cartão, jornais, revistas, envelopes e caixas', color:'#4BAED6'},
+  yellow:{txt:'Garrafas plástico, embalagens, sacos, latas e copos', color:'#F0A830'},
+  green: {txt:'Garrafas, frascos, copos e recipientes de vidro', color:'#6DBE45'},
+  brown: {txt:'Restos de comida, cascas de fruta, folhas, pão e borra de café', color:'#C97040'},
+};
+let activeBin=null;
+function selectBin(id){
+  const bar=document.getElementById('bin-info-bar');
+  const txt=document.getElementById('bin-info-txt');
+  // deselect all chips
+  document.querySelectorAll('.bin-chip').forEach(el=>el.classList.remove('active'));
+  if(activeBin===id){
+    // toggle off
+    activeBin=null;
+    bar.classList.remove('show');
+    return;
+  }
+  activeBin=id;
+  const info=BIN_INFO[id];
+  txt.textContent=info.txt;
+  txt.parentElement.style.setProperty('--info-color',info.color);
+  document.getElementById('chip-'+id).classList.add('active');
+  document.getElementById('chip-'+id).style.setProperty('--active-color',info.color);
+  bar.classList.add('show');
+}
+</script>
+</body>
+</html>
